@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0D1F1A"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Qibla Calculator"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<title>Qibla Direction Calculator</title>
+<!-- v4 - no emoji -->
+<link rel="manifest" href="manifest.json"/>
+<!-- Apple PWA icons & splash -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png"/>
+<meta name="apple-mobile-web-app-title" content="Qibla Calc"/>
+<link rel="icon" type="image/png" href="icon-192.png"/>
+<style>
+:root{
+  --green:#1D9E75;--green-d:#0F6E56;--green-l:#E1F5EE;
+  --bg:#0D1F1A;--bg2:#122820;--bg3:#1A3530;
+  --border:#264740;--text:#E8F5F1;--text2:#7AADA0;--text3:#4A7A6E;
+  --red:#E24B4A;--blue:#378ADD;--gold:#C9A84C;
+  --radius:12px;--radius-sm:8px;
+  --font:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overscroll-behavior:none;}
+
+/* LOCK */
+#lock-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+.lock-logo{width:72px;height:72px;background:var(--green);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;box-shadow:0 0 40px rgba(29,158,117,.35);}
+.lock-title{font-size:22px;font-weight:600;margin-bottom:4px;}
+.lock-sub{font-size:13px;color:var(--text2);margin-bottom:2.5rem;}
+.lock-field{width:100%;max-width:320px;padding:14px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:16px;letter-spacing:3px;text-align:center;outline:none;margin-bottom:12px;}
+.lock-field::placeholder{letter-spacing:0;color:var(--text3);font-size:14px;}
+.lock-field:focus{border-color:var(--green);}
+.lock-btn{width:100%;max-width:320px;padding:14px;background:var(--green);border:none;border-radius:var(--radius);color:white;font-size:15px;font-weight:500;cursor:pointer;}
+.lock-btn:active{background:var(--green-d);}
+.lock-err{font-size:13px;color:var(--red);margin-top:10px;min-height:18px;}
+.lock-dev{position:absolute;bottom:2rem;font-size:11px;color:var(--text3);}
+
+/* APP */
+#main-app{display:none;padding-bottom:3rem;}
+.app-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.app-header .title{font-size:17px;font-weight:600;}
+.app-header .sub{font-size:11px;color:var(--text2);margin-top:1px;}
+.dev-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11px;color:var(--green);text-align:right;line-height:1.4;}
+.dev-chip span{display:block;font-size:10px;color:var(--text2);}
+
+.section{padding:0 16px;margin-top:18px;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.step-dot{width:26px;height:26px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
+.step-dot.blue{background:var(--blue);}
+.section-title{font-size:14px;font-weight:500;}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+.card.hl{border-color:var(--green);}
+
+.tabs{display:flex;gap:6px;margin-bottom:12px;}
+.tab{flex:1;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:13px;cursor:pointer;}
+.tab.active{background:var(--green);color:white;border-color:var(--green);}
+
+.lbl{font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px;}
+.field{display:flex;flex-direction:column;}
+.field input,.field select,.field-full input,.field-full select{padding:11px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;-webkit-appearance:none;}
+.field input:focus,.field select:focus,.field-full input:focus,.field-full select:focus{border-color:var(--green);}
+.field-full{display:flex;flex-direction:column;margin-bottom:10px;}
+
+.btn-primary{width:100%;padding:13px;background:var(--green);border:none;border-radius:var(--radius);color:white;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:8px;}
+.btn-primary:active{background:var(--green-d);}
+.btn-outline{width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;cursor:pointer;margin-bottom:8px;}
+.btn-outline:active{background:var(--bg3);}
+.btn-danger{width:100%;padding:12px;background:transparent;border:1px solid var(--red);border-radius:var(--radius);color:var(--red);font-size:14px;cursor:pointer;margin-bottom:8px;}
+
+.status-msg{font-size:12px;color:var(--text2);text-align:center;padding:6px 0;}
+
+.result-center{text-align:center;padding:.75rem 0 1rem;}
+.result-label{font-size:12px;color:var(--text2);margin-bottom:4px;}
+.result-angle{font-size:52px;font-weight:600;color:var(--green);line-height:1;}
+.result-cardinal{font-size:16px;color:var(--green-d);margin-top:4px;font-weight:500;}
+
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0;}
+.metric{background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;}
+.metric .val{font-size:16px;font-weight:500;color:var(--text);margin-top:3px;}
+.metric .val.green{color:var(--green);}
+.metric .val.gold{color:var(--gold);}
+
+/* AZIMUTH REF */
+.az-ref-card{background:linear-gradient(135deg,var(--bg3) 0%,#1E3A2F 100%);border:1px solid var(--green);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+.az-ref-title{font-size:12px;color:var(--green);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;font-weight:600;}
+.az-ref-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.az-ref-item .az-lbl{font-size:11px;color:var(--text2);margin-bottom:3px;}
+.az-ref-item .az-val{font-size:19px;font-weight:600;color:var(--text);}
+.az-ref-item .az-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.az-ref-item.highlight .az-val{color:var(--gold);}
+.az-divider{grid-column:1/-1;height:1px;background:var(--border);}
+
+.impl-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;}
+.impl-table th{font-size:10px;color:var(--text3);font-weight:400;padding:4px 6px;border-bottom:1px solid var(--border);text-align:left;text-transform:uppercase;}
+.impl-table td{padding:8px 6px;border-bottom:1px solid var(--border);color:var(--text);}
+.impl-table tr:last-child td{border-bottom:none;}
+.pt-dot{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:var(--green);color:white;}
+.mono{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--text2);}
+
+.note-info{background:rgba(55,138,221,.12);border:1px solid rgba(55,138,221,.25);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:#7BB8F0;line-height:1.5;margin-top:8px;}
+.note-success{background:rgba(29,158,117,.12);border:1px solid rgba(29,158,117,.25);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--green);line-height:1.5;margin-bottom:10px;}
+.formula-box{background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;font-family:'SF Mono',Menlo,monospace;font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:10px;}
+
+.compass-wrap{width:180px;height:180px;margin:0 auto 14px;}
+
+.app-footer{margin:2rem 16px 0;padding-top:1rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.footer-l{font-size:11px;color:var(--text3);line-height:1.5;}
+.footer-r{font-size:12px;font-weight:600;color:var(--green);}
+
+/* PRINT / PDF styles */
+@media print{
+  body{background:white;color:black;font-family:Arial,sans-serif;}
+  #lock-screen,#main-app>.app-header,.section:last-child,.app-footer{display:none!important;}
+  .card,.az-ref-card{border:1px solid #ccc;background:white;}
+  .metric{background:#f5f5f5;}
+  .btn-primary,.btn-outline,.btn-danger{display:none!important;}
+  .result-angle{color:#0F6E56;}
+  .az-ref-item .az-val{color:#222;}
+  .az-ref-item.highlight .az-val{color:#8B6914;}
+  .metric .val.green{color:#0F6E56;}
+  #print-header{display:block!important;}
+  #result-section{display:block!important;}
+  .lbl,.az-lbl,.result-label{color:#555;}
+  .az-ref-title{color:#0F6E56;}
+  .text2,.status-msg{color:#666;}
+  .section-title{color:#222;}
+  .step-dot{background:#0F6E56;}
+  .impl-table th{color:#555;border-bottom:1px solid #ccc;}
+  .impl-table td{border-bottom:1px solid #eee;color:#222;}
+  .mono{color:#444;}
+  .note-info{background:#EEF4FF;color:#2255AA;border:1px solid #AACCFF;}
+  .note-success{background:#E8F5EE;color:#0F6E56;border:1px solid #99DDBB;}
+  .formula-box{background:#f5f5f5;color:#444;}
+}
+#print-header{display:none;padding:0 0 16px;border-bottom:2px solid #0F6E56;margin-bottom:20px;}
+#print-header h1{font-size:20px;color:#0F6E56;margin-bottom:4px;}
+#print-header p{font-size:12px;color:#666;}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock-screen">
+  <div class="lock-logo">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="18" stroke="white" stroke-width="1.5" opacity=".4"/>
+      <line x1="20" y1="2" x2="20" y2="38" stroke="white" stroke-width="1.5"/>
+      <line x1="2" y1="20" x2="38" y2="20" stroke="white" stroke-width="1.5"/>
+      <polygon points="20,4 16,14 20,10 24,14" fill="white"/>
+      <circle cx="20" cy="20" r="3" fill="white"/>
+    </svg>
+  </div>
+  <div class="lock-title">Qibla Direction Calculator</div>
+  <div class="lock-sub">Enter password to continue</div>
+  <input class="lock-field" type="password" id="pwd-input" placeholder="Password" autocomplete="current-password"/>
+  <button class="lock-btn" onclick="checkPassword()">Unlock</button>
+  <div class="lock-err" id="pwd-err"></div>
+  <div class="lock-dev">Developed by NASRAOUI FATHI</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app">
+
+  <!-- Print header (visible only when printing) -->
+  <div id="print-header">
+    <h1>&#x1F54B; QIBLA Direction Calculator</h1>
+    <p>Great Circle Bearing Method &nbsp;|&nbsp; Developed by: <strong>NASRAOUI FATHI</strong> &nbsp;|&nbsp; Date: <span id="print-date"></span></p>
+  </div>
+
+  <div class="app-header">
+    <div>
+      <div class="title"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" style="vertical-align:middle;margin-right:6px;" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="7" width="16" height="13" rx="1" fill="#C9A84C" opacity=".9"/>
+  <rect x="1" y="5" width="20" height="4" rx="1" fill="#E8C96A"/>
+  <rect x="8" y="11" width="6" height="9" rx="1" fill="#0D1F1A"/>
+  <rect x="0" y="3" width="22" height="3" rx="1" fill="#1D9E75" opacity=".8"/>
+</svg>QIBLA Direction Calculator</div>
+      <div class="sub">Great Circle Bearing · UTM Field Stakeout</div>
+    </div>
+    <div class="dev-chip"><span>Developed by</span>NASRAOUI FATHI</div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-dot">1</div>
+      <div class="section-title">Measurement point coordinates</div>
+    </div>
+    <div class="card hl">
+      <div class="tabs">
+        <button class="tab active" onclick="setMode('xy')" id="tab-xy">X, Y (metric)</button>
+        <button class="tab" onclick="setMode('gps')" id="tab-gps">GPS (Lat / Lng)</button>
+      </div>
+      <div id="mode-xy">
+        <div class="grid2">
+          <div class="field"><div class="lbl">X — Easting (m)</div><input type="number" id="x-val" placeholder="368838.270" step="0.001" inputmode="decimal"/></div>
+          <div class="field"><div class="lbl">Y — Northing (m)</div><input type="number" id="y-val" placeholder="3355642.896" step="0.001" inputmode="decimal"/></div>
+        </div>
+        <div class="field-full">
+          <div class="lbl">Projection system</div>
+          <select id="zone-sel">
+            <option value="33">UTM Zone 33N — Libya East</option>
+            <option value="32">UTM Zone 32N — Libya West</option>
+            <option value="34" selected>UTM Zone 34N</option>
+          </select>
+        </div>
+      </div>
+      <div id="mode-gps" style="display:none;">
+        <div class="grid2">
+          <div class="field"><div class="lbl">Latitude (°)</div><input type="number" id="lat-val" placeholder="32.116700" step="0.000001" inputmode="decimal"/></div>
+          <div class="field"><div class="lbl">Longitude (°)</div><input type="number" id="lng-val" placeholder="20.066700" step="0.000001" inputmode="decimal"/></div>
+        </div>
+      </div>
+      <div class="field-full">
+        <div class="lbl">Point name</div>
+        <input type="text" id="pt-name" placeholder="ex: Point A — NE corner of building"/>
+      </div>
+      <div class="status-msg" id="st1"></div>
+      <button class="btn-primary" onclick="captureGPS()">📍 Capture GPS automatically</button>
+      <button class="btn-outline" onclick="calcFromInput()">🧮 Calculate Qibla direction</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="result-section" style="display:none;">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="step-dot">2</div>
+        <div class="section-title">Result — Qibla direction</div>
+      </div>
+      <div class="card hl">
+        <div class="note-success">✓ <strong>One point is sufficient</strong> — the Qibla azimuth depends only on your geographic position. This result is exact.</div>
+        <div class="formula-box">
+          Formula: Great Circle Bearing<br>
+          ΔL = lng(Mecca) − lng(you)<br>
+          Y = sin(ΔL) × cos(φ_Mecca)<br>
+          X = cos(φ_you)·sin(φ_Mecca) − sin(φ_you)·cos(φ_Mecca)·cos(ΔL)<br>
+          Azimuth = atan2(Y, X) mod 360°
+        </div>
+        <div class="result-center">
+          <div class="result-label" id="res-name">—</div>
+          <div class="result-angle" id="res-angle">—°</div>
+          <div class="result-cardinal" id="res-cardinal">—</div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><div class="lbl">X — Easting</div><div class="val" id="res-x">—</div></div>
+          <div class="metric"><div class="lbl">Y — Northing</div><div class="val" id="res-y">—</div></div>
+          <div class="metric"><div class="lbl">Latitude</div><div class="val" id="res-lat">—</div></div>
+          <div class="metric"><div class="lbl">Longitude</div><div class="val" id="res-lng">—</div></div>
+        </div>
+        <div class="metric" style="text-align:center;">
+          <div class="lbl">Distance to Mecca</div>
+          <div class="val green" id="res-dist">—</div>
+        </div>
+      </div>
+
+      <!-- AZIMUTH REFERENCE -->
+      <div class="az-ref-card">
+        <div class="az-ref-title">📐 Azimuth Reference</div>
+        <div class="az-ref-grid">
+          <div class="az-ref-item highlight">
+            <div class="az-lbl">Qibla Azimuth</div>
+            <div class="az-val" id="az-qibla">—°</div>
+            <div class="az-sub">from True North</div>
+          </div>
+          <div class="az-ref-item">
+            <div class="az-lbl">Back Azimuth</div>
+            <div class="az-val" id="az-back">—°</div>
+            <div class="az-sub">opposite direction</div>
+          </div>
+          <div class="az-divider"></div>
+          <div class="az-ref-item">
+            <div class="az-lbl">Azimuth in Grad (gon)</div>
+            <div class="az-val" id="az-gon">—</div>
+            <div class="az-sub">gon (400° system)</div>
+          </div>
+          <div class="az-ref-item">
+            <div class="az-lbl">Azimuth in Radians</div>
+            <div class="az-val" id="az-rad">—</div>
+            <div class="az-sub">rad</div>
+          </div>
+          <div class="az-divider"></div>
+          <div class="az-ref-item">
+            <div class="az-lbl">Magnetic Declination</div>
+            <div class="az-val" id="az-decl">≈ +1.5°</div>
+            <div class="az-sub">Libya avg. (East)</div>
+          </div>
+          <div class="az-ref-item">
+            <div class="az-lbl">Magnetic Azimuth</div>
+            <div class="az-val" id="az-mag">—°</div>
+            <div class="az-sub">for compass use</div>
+          </div>
+          <div class="az-divider"></div>
+          <div class="az-ref-item" style="grid-column:1/-1;">
+            <div class="az-lbl">Cardinal direction</div>
+            <div class="az-val" id="az-cardinal" style="font-size:16px;color:var(--green);">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 stakeout -->
+    <div class="section">
+      <div class="section-header">
+        <div class="step-dot">3</div>
+        <div class="section-title">Field stakeout points</div>
+      </div>
+      <div class="card">
+        <div class="lbl" style="margin-bottom:8px;">Stakes along the Qibla axis from origin:</div>
+        <table class="impl-table">
+          <thead><tr><th>Pt</th><th>Dist</th><th>X (m)</th><th>Y (m)</th><th>Role</th></tr></thead>
+          <tbody id="impl-body"></tbody>
+        </table>
+        <div class="note-info">📌 Set a stake at each point. Axis A → B → C defines the exact Qibla direction for building alignment.</div>
+      </div>
+    </div>
+
+    <!-- STEP 4 compass -->
+    <div class="section">
+      <div class="section-header">
+        <div class="step-dot blue">4</div>
+        <div class="section-title">Live compass — field verification</div>
+      </div>
+      <div class="card">
+        <div class="compass-wrap">
+          <svg id="compass-svg" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" width="180" height="180">
+            <circle cx="90" cy="90" r="86" fill="#122820" stroke="#264740" stroke-width="1"/>
+            <g id="ticks-g"></g>
+            <text x="90" y="18" text-anchor="middle" font-size="14" font-weight="600" fill="#E24B4A">N</text>
+            <text x="90" y="172" text-anchor="middle" font-size="12" fill="#7AADA0">S</text>
+            <text x="172" y="95" text-anchor="middle" font-size="12" fill="#7AADA0">E</text>
+            <text x="8" y="95" text-anchor="middle" font-size="12" fill="#7AADA0">W</text>
+            <g id="q-needle" transform="rotate(0,90,90)">
+              <polygon points="90,24 85,90 90,78 95,90" fill="#1D9E75" opacity=".95"/>
+              <polygon points="90,156 85,90 90,102 95,90" fill="#1D9E75" opacity=".3"/>
+              <text x="90" y="162" text-anchor="middle" font-size="8" fill="#1D9E75" font-weight="600">Qibla</text>
+            </g>
+            <g id="n-needle" transform="rotate(0,90,90)">
+              <polygon points="90,32 86,90 90,82 94,90" fill="#E24B4A" opacity=".9"/>
+              <polygon points="90,148 86,90 90,98 94,90" fill="#7AADA0" opacity=".4"/>
+            </g>
+            <circle cx="90" cy="90" r="5" fill="#0D1F1A" stroke="#264740" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="metrics">
+          <div class="metric"><div class="lbl">Current heading</div><div class="val" id="l-head">—</div></div>
+          <div class="metric"><div class="lbl" style="color:var(--green);">Qibla azimuth</div><div class="val green" id="l-qibla">—</div></div>
+        </div>
+        <div class="metric" style="text-align:center;margin-bottom:12px;">
+          <div class="lbl">Offset — rotate by</div>
+          <div class="val" id="l-diff" style="font-size:24px;color:var(--gold);">—</div>
+        </div>
+        <button class="btn-primary" onclick="startLive()">▶ Activate live compass</button>
+        <div class="status-msg" id="l-status">Calculate Qibla first, then activate</div>
+      </div>
+    </div>
+
+    <!-- EXPORT & LOCK -->
+    <div class="section">
+      <button class="btn-outline" onclick="exportPDF()">📄 Export / Print Report</button>
+      <button class="btn-outline" onclick="exportTXT()">📋 Download Report (.txt)</button>
+      <button class="btn-danger" onclick="lockApp()">🔒 Lock application</button>
+    </div>
+
+  </div><!-- /result-section -->
+
+  <div class="app-footer">
+    <div class="footer-l">Qibla Direction Calculator<br>Great Circle Bearing method</div>
+    <div class="footer-r">© NASRAOUI FATHI</div>
+  </div>
+
+</div><!-- /main-app -->
+
+<script>
+/* ── PASSWORD ── */
+const PASS = 'Subtopo@2025';
+
+function checkPassword(){
+  const v = document.getElementById('pwd-input').value;
+  if(v === PASS){
+    sessionStorage.setItem('q_ok','1');
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('main-app').style.display='block';
+    initTicks();
+  } else {
+    const e = document.getElementById('pwd-err');
+    e.textContent='Incorrect password. Please try again.';
+    document.getElementById('pwd-input').value='';
+    document.getElementById('pwd-input').focus();
+    setTimeout(()=>e.textContent='',3000);
+  }
+}
+document.getElementById('pwd-input').addEventListener('keydown',e=>{ if(e.key==='Enter') checkPassword(); });
+
+function lockApp(){
+  sessionStorage.removeItem('q_ok');
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('lock-screen').style.display='flex';
+  document.getElementById('pwd-input').value='';
+}
+
+if(sessionStorage.getItem('q_ok')==='1'){
+  document.getElementById('lock-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  document.addEventListener('DOMContentLoaded', initTicks);
+}
+
+/* ── COMPASS TICKS ── */
+function initTicks(){
+  const g = document.getElementById('ticks-g');
+  if(!g||g.childNodes.length>0) return;
+  for(let i=0;i<72;i++){
+    const a=i*5, major=i%6===0;
+    const r1=82, r2=major?74:78;
+    const ar=a*Math.PI/180;
+    const x1=90+r1*Math.sin(ar), y1=90-r1*Math.cos(ar);
+    const x2=90+r2*Math.sin(ar), y2=90-r2*Math.cos(ar);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke',major?'#4A7A6E':'#264740');
+    ln.setAttribute('stroke-width',major?'1.5':'0.8');
+    g.appendChild(ln);
+  }
+}
+document.addEventListener('DOMContentLoaded', initTicks);
+
+/* ── CONSTANTS ── */
+const MECCA={lat:21.4225,lng:39.8262};
+const MAG_DECL=1.5;
+let mode='xy', curLat=null, curLng=null, curX=null, curY=null;
+let curQ=null, curName=null, simInt=null;
+
+const toRad=d=>d*Math.PI/180;
+const toDeg=r=>r*180/Math.PI;
+const fmt=(n,d=2)=>n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+/* ── UTM ↔ LATLNG ── */
+function utmToLatLng(x,y,zone){
+  const a=6378137,e2=0.00669438,k0=0.9996,x0=500000;
+  const lon0=toRad((zone-1)*6-180+3);
+  const M=y/k0;
+  const mu=M/(a*(1-e2/4-3*e2*e2/64));
+  const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const phi1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1**2/16)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu);
+  const N1=a/Math.sqrt(1-e2*Math.sin(phi1)**2);
+  const T1=Math.tan(phi1)**2;
+  const C1=e2*Math.cos(phi1)**2/(1-e2);
+  const R1=a*(1-e2)/Math.pow(1-e2*Math.sin(phi1)**2,1.5);
+  const D=(x-x0)/(N1*k0);
+  const lat=phi1-(N1*Math.tan(phi1)/R1)*(D**2/2-(5+3*T1+10*C1-4*C1**2-9*e2)*D**4/24);
+  const lng=lon0+(D-(1+2*T1+C1)*D**3/6)/Math.cos(phi1);
+  return{lat:toDeg(lat),lng:toDeg(lng)};
+}
+
+function latLngToUTM(lat,lng){
+  const a=6378137,e2=0.00669438,k0=0.9996;
+  const zone=Math.floor((lng+180)/6)+1;
+  const lon0=toRad((zone-1)*6-180+3);
+  const latr=toRad(lat),lngr=toRad(lng);
+  const N=a/Math.sqrt(1-e2*Math.sin(latr)**2);
+  const T=Math.tan(latr)**2;
+  const C=e2*Math.cos(latr)**2/(1-e2);
+  const A=Math.cos(latr)*(lngr-lon0);
+  const M=a*((1-e2/4-3*e2**2/64)*latr-(3*e2/8+3*e2**2/32)*Math.sin(2*latr)+(15*e2**2/256)*Math.sin(4*latr));
+  const x=k0*N*(A+(1-T+C)*A**3/6)+500000;
+  const y=k0*(M+N*Math.tan(latr)*(A**2/2+(5-T+9*C+4*C**2)*A**4/24));
+  return{x,y,zone};
+}
+
+function calcQibla(lat,lng){
+  const dL=toRad(MECCA.lng-lng);
+  const p1=toRad(lat),p2=toRad(MECCA.lat);
+  const Y=Math.sin(dL)*Math.cos(p2);
+  const X=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dL);
+  return(toDeg(Math.atan2(Y,X))+360)%360;
+}
+
+function calcDist(la,ln){
+  const R=6371,dL=toRad(MECCA.lat-la),dN=toRad(MECCA.lng-ln);
+  const a=Math.sin(dL/2)**2+Math.cos(toRad(la))*Math.cos(toRad(MECCA.lat))*Math.sin(dN/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+function cardinal(d){
+  return['North','NNE','North-East','ENE','East','ESE','South-East','SSE',
+         'South','SSW','South-West','WSW','West','WNW','North-West','NNW'][Math.round(d/22.5)%16];
+}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('mode-xy').style.display=m==='xy'?'block':'none';
+  document.getElementById('mode-gps').style.display=m==='gps'?'block':'none';
+  document.getElementById('tab-xy').className='tab'+(m==='xy'?' active':'');
+  document.getElementById('tab-gps').className='tab'+(m==='gps'?' active':'');
+}
+
+function captureGPS(){
+  if(!navigator.geolocation){document.getElementById('st1').textContent='GPS not available';return;}
+  document.getElementById('st1').textContent='Getting location…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const{latitude:lat,longitude:lng,accuracy}=pos.coords;
+    const utm=latLngToUTM(lat,lng);
+    document.getElementById('st1').textContent='GPS captured — accuracy ±'+Math.round(accuracy)+' m';
+    if(mode==='xy'){
+      document.getElementById('x-val').value=utm.x.toFixed(3);
+      document.getElementById('y-val').value=utm.y.toFixed(3);
+    } else {
+      document.getElementById('lat-val').value=lat.toFixed(6);
+      document.getElementById('lng-val').value=lng.toFixed(6);
+    }
+    if(!document.getElementById('pt-name').value)
+      document.getElementById('pt-name').value='GPS Point (±'+Math.round(accuracy)+'m)';
+    showResult(lat,lng,+utm.x.toFixed(3),+utm.y.toFixed(3),document.getElementById('pt-name').value);
+  },()=>{document.getElementById('st1').textContent='GPS error — enter coordinates manually';},{enableHighAccuracy:true,timeout:12000});
+}
+
+function calcFromInput(){
+  const name=document.getElementById('pt-name').value||'Measurement point';
+  let lat,lng,x,y;
+  if(mode==='xy'){
+    x=parseFloat(document.getElementById('x-val').value);
+    y=parseFloat(document.getElementById('y-val').value);
+    const zone=parseInt(document.getElementById('zone-sel').value);
+    if(isNaN(x)||isNaN(y)){document.getElementById('st1').textContent='Please enter X and Y values';return;}
+    ({lat,lng}=utmToLatLng(x,y,zone));
+  } else {
+    lat=parseFloat(document.getElementById('lat-val').value);
+    lng=parseFloat(document.getElementById('lng-val').value);
+    if(isNaN(lat)||isNaN(lng)){document.getElementById('st1').textContent='Please enter Lat and Lng values';return;}
+    const utm=latLngToUTM(lat,lng);
+    x=+utm.x.toFixed(3);y=+utm.y.toFixed(3);
+  }
+  showResult(lat,lng,x,y,name);
+}
+
+function showResult(lat,lng,x,y,name){
+  curLat=lat;curLng=lng;curX=x;curY=y;curName=name;
+  curQ=calcQibla(lat,lng);
+  const dist=calcDist(lat,lng);
+  const backAz=(curQ+180)%360;
+  const gon=curQ*400/360;
+  const rad=toRad(curQ);
+  const magAz=(curQ-MAG_DECL+360)%360;
+
+  document.getElementById('res-name').textContent=name;
+  document.getElementById('res-angle').textContent=fmt(curQ,4)+'°';
+  document.getElementById('res-cardinal').textContent=cardinal(curQ)+' — toward Mecca';
+  document.getElementById('res-x').textContent=fmt(x,3)+' m';
+  document.getElementById('res-y').textContent=fmt(y,3)+' m';
+  document.getElementById('res-lat').textContent=lat.toFixed(6)+'°';
+  document.getElementById('res-lng').textContent=lng.toFixed(6)+'°';
+  document.getElementById('res-dist').textContent=dist.toLocaleString('en-US')+' km';
+
+  document.getElementById('az-qibla').textContent=fmt(curQ,4)+'°';
+  document.getElementById('az-back').textContent=fmt(backAz,4)+'°';
+  document.getElementById('az-gon').textContent=fmt(gon,4);
+  document.getElementById('az-rad').textContent=rad.toFixed(6);
+  document.getElementById('az-mag').textContent=fmt(magAz,4)+'°';
+  document.getElementById('az-cardinal').textContent=cardinal(curQ);
+  document.getElementById('l-qibla').textContent=fmt(curQ,2)+'°';
+
+  // Stakeout
+  const dists=[0,5,10,20,50];
+  const roles=['Origin — your position','Stake at 5 m — Qibla axis','Stake at 10 m — Qibla axis','Stake at 20 m — Qibla axis','Control stake at 50 m'];
+  const colors=['#1D9E75','#1D9E75','#1D9E75','#1D9E75','#0F6E56'];
+  const labs=['A','B','C','D','E'];
+  const qr=toRad(curQ);
+  const tbody=document.getElementById('impl-body');
+  tbody.innerHTML='';
+  dists.forEach((d,i)=>{
+    const px=+(x+d*Math.sin(qr)).toFixed(3);
+    const py=+(y+d*Math.cos(qr)).toFixed(3);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="pt-dot" style="background:${colors[i]}">${labs[i]}</span></td>
+      <td style="color:var(--text2)">${d} m</td>
+      <td class="mono">${fmt(px,3)}</td>
+      <td class="mono">${fmt(py,3)}</td>
+      <td style="font-size:11px;color:var(--text3)">${roles[i]}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('result-section').style.display='block';
+  document.getElementById('result-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ── LIVE COMPASS ── */
+function updateLive(h){
+  document.getElementById('l-head').textContent=Math.round(h)+'°';
+  if(curQ!==null){
+    const diff=Math.round(((curQ-h+540)%360)-180);
+    document.getElementById('l-diff').textContent=(diff>0?'↺ +':diff<0?'↻ ':'')+diff+'°';
+    document.getElementById('q-needle').setAttribute('transform',`rotate(${(curQ-h+360)%360},90,90)`);
+  }
+  document.getElementById('n-needle').setAttribute('transform',`rotate(${-h},90,90)`);
+}
+
+function startLive(){
+  const handler=e=>{if(e.alpha!==null)updateLive((360-e.alpha)%360);};
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(s=>{
+      if(s==='granted'){
+        window.addEventListener('deviceorientationabsolute',handler,true);
+        document.getElementById('l-status').textContent='Live compass active';
+      }
+    });
+  } else if(window.DeviceOrientationEvent){
+    window.addEventListener('deviceorientationabsolute',handler,true);
+    window.addEventListener('deviceorientation',handler,true);
+    document.getElementById('l-status').textContent='Live compass active — align to the Qibla';
+  } else {
+    if(simInt)clearInterval(simInt);
+    let d=0;
+    simInt=setInterval(()=>{d=(d+1.5)%360;updateLive(d);},40);
+    document.getElementById('l-status').textContent='Demo mode (no sensor available)';
+  }
+}
+
+/* ── EXPORT PDF (browser print dialog) ── */
+function exportPDF(){
+  if(!curQ){alert('Please calculate Qibla first.');return;}
+  document.getElementById('print-date').textContent=new Date().toLocaleDateString('en-GB');
+  window.print();
+}
+
+/* ── EXPORT TXT (download file) ── */
+function exportTXT(){
+  if(!curQ){alert('Please calculate Qibla first.');return;}
+  const backAz=(curQ+180)%360;
+  const gon=curQ*400/360;
+  const magAz=(curQ-MAG_DECL+360)%360;
+  const qr=toRad(curQ);
+  const dists=[0,5,10,20,50];
+  const labs=['A','B','C','D','E'];
+  const ptsLines=dists.map((d,i)=>{
+    const px=+(curX+d*Math.sin(qr)).toFixed(3);
+    const py=+(curY+d*Math.cos(qr)).toFixed(3);
+    return `  ${labs[i]}  dist=${d}m    X = ${px.toFixed(3).padStart(12)}    Y = ${py.toFixed(3).padStart(12)}`;
+  }).join('\n');
+
+  const txt=
+`================================================================
+          QIBLA DIRECTION CALCULATOR
+          Developed by: NASRAOUI FATHI
+          Date: ${new Date().toLocaleDateString('en-GB')}
+================================================================
+
+MEASUREMENT POINT : ${curName}
+  X  (Easting)    = ${curX.toFixed(3)} m
+  Y  (Northing)   = ${curY.toFixed(3)} m
+  Latitude        = ${curLat.toFixed(6)} °
+  Longitude       = ${curLng.toFixed(6)} °
+
+FORMULA: Great Circle Bearing
+  DeltaL = lng(Mecca) - lng(you)
+  Y = sin(DL) x cos(phi_Mecca)
+  X = cos(phi_you)*sin(phi_Mecca) - sin(phi_you)*cos(phi_Mecca)*cos(DL)
+  Azimuth = atan2(Y,X) mod 360 deg
+
+----------------------------------------------------------------
+                  AZIMUTH REFERENCE
+----------------------------------------------------------------
+  Qibla Azimuth (True North)   : ${fmt(curQ,4)} deg
+  Back Azimuth                  : ${fmt(backAz,4)} deg
+  Azimuth in Grad (gon)         : ${fmt(gon,4)} gon
+  Azimuth in Radians            : ${toRad(curQ).toFixed(6)} rad
+  Magnetic Declination (Libya)  : +${MAG_DECL} deg (East)
+  Magnetic Azimuth              : ${fmt(magAz,4)} deg
+  Cardinal direction            : ${cardinal(curQ)}
+  Distance to Mecca             : ${calcDist(curLat,curLng).toLocaleString('en-US')} km
+
+----------------------------------------------------------------
+              FIELD STAKEOUT POINTS
+----------------------------------------------------------------
+${ptsLines}
+
+  Axis A -> B -> C defines the exact Qibla direction
+  for building alignment on terrain.
+
+----------------------------------------------------------------
+  Mecca reference : 21.422500 N  /  39.826200 E
+================================================================
+  (c) NASRAOUI FATHI  -  Qibla Direction Calculator
+================================================================`;
+
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='Qibla_Report_'+new Date().toISOString().slice(0,10)+'.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ── SERVICE WORKER ── */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.log('SW error:', e));
+  });
+}
+
+/* ── PWA INSTALL ── */
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install banner
+  document.getElementById('install-banner').style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').style.display = 'none';
+  deferredPrompt = null;
+});
+
+function installPWA(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(()=>{
+      deferredPrompt=null;
+      document.getElementById('install-banner').style.display='none';
+    });
+  }
+}
+function dismissInstall(){
+  document.getElementById('install-banner').style.display='none';
+}
+</script>
+<!-- INSTALL BANNER (Android Chrome) -->
+<div id="install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#122820;border-top:1px solid #1D9E75;padding:14px 16px;flex-direction:column;gap:10px;">
+  <div style="font-size:13px;color:#E8F5F1;">
+    <strong style="color:#1D9E75;">QIBLA - Install Qibla Calculator</strong><br>
+    <span style="color:#7AADA0;font-size:12px;">Add to home screen for offline use</span>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button onclick="installPWA()" style="flex:1;padding:10px;background:#1D9E75;border:none;border-radius:8px;color:white;font-size:14px;font-weight:500;cursor:pointer;">
+      Install App
+    </button>
+    <button onclick="dismissInstall()" style="padding:10px 16px;background:transparent;border:1px solid #264740;border-radius:8px;color:#7AADA0;font-size:14px;cursor:pointer;">
+      Later
+    </button>
+  </div>
+</div>
+
+<!-- IPHONE INSTALL INSTRUCTIONS (shown once on Safari) -->
+<div id="ios-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#122820;border-top:1px solid #1D9E75;padding:14px 16px;">
+  <div style="font-size:13px;color:#E8F5F1;margin-bottom:8px;">
+    <strong style="color:#1D9E75;">QIBLA - Install on iPhone</strong>
+  </div>
+  <div style="font-size:12px;color:#7AADA0;line-height:1.8;">
+    1. Tap the <strong style="color:#E8F5F1;">Share</strong> button &nbsp;⬆&nbsp; at the bottom of Safari<br>
+    2. Scroll down and tap <strong style="color:#E8F5F1;">"Add to Home Screen"</strong><br>
+    3. Tap <strong style="color:#E8F5F1;">"Add"</strong> — the app icon will appear
+  </div>
+  <button onclick="document.getElementById('ios-banner').style.display='none';localStorage.setItem('ios_dismissed','1');"
+    style="margin-top:10px;width:100%;padding:10px;background:transparent;border:1px solid #264740;border-radius:8px;color:#7AADA0;font-size:13px;cursor:pointer;">
+    Got it
+  </button>
+</div>
+
+<script>
+// Show iPhone install banner on Safari (not standalone, not dismissed before)
+(function(){
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  const dismissed = localStorage.getItem('ios_dismissed');
+  if(isIOS && isSafari && !isStandalone && !dismissed){
+    setTimeout(()=>{ document.getElementById('ios-banner').style.display='block'; }, 2000);
+  }
+})();
+</script>
+</body>
+</html>
