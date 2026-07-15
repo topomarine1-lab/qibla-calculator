@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="fr" id="htmlRoot">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2980b9">
+<title>SubTopo Engineering - Qibla Calculator</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SubTopo Qibla">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.9.0/dist/proj4.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg-darkest:#071f1c;--bg-dark:#0a2e2a;--bg-card:#0f3a35;--bg-card-2:#0d342f;
+  --border:#1a5f56;--border-light:#2a7d72;
+  --emerald:#10b981;--emerald-light:#34d399;--emerald-dark:#059669;
+  --text:#ffffff;--text-soft:#a7f3d0;--text-mute:#6ee7b7;--danger:#ef4444
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-darkest);min-height:100vh;color:var(--text);overflow-x:hidden}
+#loginOverlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#071f1c 0%,#0a2e2a 50%,#071f1c 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+#loginOverlay.hidden{display:none}
+.login-box{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:40px 30px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center}
+.login-logo{width:80px;height:80px;border-radius:20px;margin:0 auto 20px;background:linear-gradient(135deg,#fff,#e8f5e9);display:flex;align-items:center;justify-content:center;font-size:46px;box-shadow:0 8px 24px rgba(16,185,129,.3);overflow:hidden}
+.login-logo img{width:100%;height:100%;object-fit:cover}
+.login-title{font-size:22px;font-weight:800;margin-bottom:8px}
+.login-sub{font-size:13px;color:var(--text-soft);margin-bottom:30px}
+.login-box input{width:100%;padding:14px 16px;background:var(--bg-dark);color:#fff;border:1px solid var(--border);border-radius:12px;font-size:15px;margin-bottom:12px;text-align:center;letter-spacing:3px}
+.login-box input:focus{outline:none;border-color:var(--emerald);box-shadow:0 0 0 3px rgba(16,185,129,.2)}
+.login-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--emerald),var(--emerald-dark));color:#fff;font-weight:700;font-size:15px;cursor:pointer;transition:all .3s;letter-spacing:1px}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(16,185,129,.4)}
+.login-error{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px}
+.login-footer{margin-top:24px;padding-top:20px;border-top:1px solid var(--border);font-size:11px;color:var(--text-mute)}
+.lang-select{display:flex;gap:6px;justify-content:center;margin-bottom:20px}
+.lang-btn{background:var(--bg-dark);border:1px solid var(--border);color:var(--text-soft);padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600}
+.lang-btn.active{background:var(--emerald);color:#fff;border-color:var(--emerald)}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--bg-dark);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:46px;height:46px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#fff,#d1fae5);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 12px rgba(16,185,129,.3)}
+.logo-icon img{width:100%;height:100%;object-fit:cover}
+.logo-text h1{font-size:17px;font-weight:800;color:#fff}
+.logo-text p{font-size:11px;color:var(--text-soft);margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px}
+.developer-badge{background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;border-radius:20px;font-size:11px;text-align:right}
+.developer-badge .by{color:var(--text-soft);font-size:10px}
+.developer-badge .name{color:var(--emerald-light);font-weight:700;font-size:12px}
+.icon-btn{background:transparent;border:1px solid var(--border);color:var(--text-soft);padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer}
+.icon-btn:hover{background:var(--bg-card);color:#fff}
+.tabs{display:flex;background:var(--bg-dark);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:80px;padding:14px 6px;border:none;background:transparent;color:var(--text-soft);font-size:11px;font-weight:600;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:3px;border-bottom:2px solid transparent}
+.tab:hover{color:#fff;background:rgba(16,185,129,.05)}
+.tab.active{color:var(--emerald-light);border-bottom-color:var(--emerald);background:rgba(16,185,129,.08)}
+.panel{display:none;padding:16px;animation:fadeIn .3s}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+.card-title{font-size:12px;font-weight:700;color:var(--emerald-light);text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+.segment{display:flex;margin-bottom:18px;background:var(--bg-dark);border-radius:10px;padding:0;border:1px solid var(--border)}
+.segment button{flex:1;padding:14px;border:none;background:transparent;color:var(--text-soft);font-weight:600;cursor:pointer;transition:all .3s;font-size:14px;border-radius:8px}
+.segment button.active{background:var(--emerald);color:#fff}
+.field{margin-bottom:14px}
+label{display:block;font-size:11px;font-weight:700;color:var(--emerald-light);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+input,select{width:100%;padding:14px 16px;background:var(--bg-dark);color:#fff;border:1px solid var(--border);border-radius:10px;font-size:15px;font-weight:500;transition:all .3s}
+input:focus,select:focus{outline:none;border-color:var(--emerald);box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+input::placeholder{color:rgba(167,243,208,.3)}
+select option{background:var(--bg-dark)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.row{grid-template-columns:1fr}}
+.btn{width:100%;padding:16px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;letter-spacing:.3px}
+.btn-primary{background:var(--emerald);color:#fff}
+.btn-primary:hover{background:var(--emerald-dark)}
+.btn-outline{background:transparent;color:#fff;border:1px solid var(--border)}
+.btn-outline:hover{background:var(--bg-card-2);border-color:var(--emerald)}
+.btn:active{transform:scale(.98)}
+.btn-sm{padding:10px 14px;font-size:13px}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.result-item{background:var(--bg-card-2);padding:14px;border-radius:10px;border-left:3px solid var(--emerald)}
+.result-item.full{grid-column:1/-1}
+.result-label{font-size:10px;color:var(--emerald-light);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;font-weight:700}
+.result-value{font-size:18px;font-weight:800;color:#fff}
+.result-sub{font-size:12px;color:var(--text-soft);margin-top:2px}
+.qibla-big{text-align:center;padding:30px 20px;background:linear-gradient(135deg,var(--bg-card-2),rgba(16,185,129,.1));border-radius:14px;margin-bottom:16px;border:1px solid var(--emerald)}
+.qibla-angle{font-size:64px;font-weight:900;color:var(--emerald-light);line-height:1;text-shadow:0 0 30px rgba(16,185,129,.4)}
+.qibla-label{font-size:13px;color:var(--text-soft);margin-top:10px;text-transform:uppercase;letter-spacing:3px;font-weight:700}
+.compass-wrap{position:relative;width:300px;height:300px;margin:30px auto}
+.compass-disc{width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#d1fae5);box-shadow:0 0 0 6px var(--bg-dark),0 0 0 10px var(--emerald),0 20px 60px rgba(0,0,0,.5);position:relative;transition:transform .2s ease-out}
+.compass-letter{position:absolute;font-size:24px;font-weight:900;color:var(--bg-darkest);font-family:Georgia,serif}
+.compass-letter.N{top:14px;left:50%;transform:translateX(-50%);color:var(--danger)}
+.compass-letter.S{bottom:14px;left:50%;transform:translateX(-50%)}
+.compass-letter.E{right:14px;top:50%;transform:translateY(-50%)}
+.compass-letter.W{left:14px;top:50%;transform:translateY(-50%)}
+.qibla-arrow{position:absolute;left:50%;top:50%;width:60px;height:60px;transform:translate(-50%,-180px);transform-origin:50% 180px;transition:transform .5s ease-out;display:flex;align-items:center;justify-content:center;font-size:40px;filter:drop-shadow(0 4px 12px rgba(16,185,129,.6))}
+.compass-center{position:absolute;left:50%;top:50%;width:24px;height:24px;background:radial-gradient(circle,var(--emerald-light),var(--bg-darkest));border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.heading-info{text-align:center;margin-top:20px;padding:16px;background:var(--bg-card-2);border-radius:10px;border:1px solid var(--border)}
+.heading-value{font-size:36px;font-weight:900;color:var(--emerald-light)}
+.heading-label{font-size:12px;color:var(--text-soft);text-transform:uppercase;letter-spacing:2px;margin-top:4px}
+.status{padding:12px 16px;border-radius:10px;margin-top:12px;display:flex;align-items:center;gap:10px;font-size:13px}
+.status-success{background:rgba(16,185,129,.15);border:1px solid var(--emerald);color:var(--emerald-light)}
+.status-warning{background:rgba(239,68,68,.1);border:1px solid var(--danger);color:#fca5a5}
+#mapView{height:500px;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+.leaflet-container{background:var(--bg-dark)}
+.stakeout-table{width:100%;border-collapse:collapse;margin-top:14px;background:var(--bg-card-2);border-radius:10px;overflow:hidden;font-size:12px}
+.stakeout-table th{background:var(--bg-dark);padding:10px 6px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--emerald-light);border-bottom:2px solid var(--emerald)}
+.stakeout-table td{padding:10px 6px;text-align:center;border-bottom:1px solid var(--border);color:#fff;font-family:'Courier New',monospace}
+.stakeout-table tr:hover td{background:rgba(16,185,129,.05)}
+.stakeout-table tr:first-child td{background:rgba(16,185,129,.12);font-weight:bold}
+.info-row{display:flex;justify-content:space-between;padding:10px 14px;background:var(--bg-card-2);border-radius:8px;margin-bottom:6px;font-size:13px;border:1px solid var(--border)}
+.info-row b{color:var(--emerald-light)}
+.info-row span{color:#fff;font-family:'Courier New',monospace}
+.empty{text-align:center;padding:40px 20px;color:var(--text-soft)}
+.empty span{font-size:60px;display:block;margin-bottom:12px;opacity:.4}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--bg-card);color:#fff;padding:14px 24px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.6);border:1px solid var(--emerald);z-index:1000;transition:transform .4s;font-weight:600;font-size:14px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+footer{text-align:center;padding:16px;font-size:11px;color:var(--text-soft);opacity:.7;border-top:1px solid var(--border);margin-top:20px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:800;color:var(--emerald-light);margin-bottom:20px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid var(--border);padding-bottom:12px}
+.logo-preview{width:80px;height:80px;border-radius:12px;margin:0 auto 16px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed var(--border)}
+.logo-preview img{width:100%;height:100%;object-fit:cover}
+.file-input-wrapper{position:relative;overflow:hidden;display:inline-block;width:100%}
+.file-input-wrapper input[type=file]{position:absolute;left:-9999px}
+.file-input-label{display:block;padding:12px;background:var(--bg-dark);border:1px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;color:var(--text-soft);transition:all .3s}
+.file-input-label:hover{border-color:var(--emerald);color:#fff}
+#installBanner{display:none;position:fixed;bottom:20px;left:20px;right:20px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:16px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:9997;align-items:center;justify-content:space-between;gap:12px;animation:slideUp .4s ease-out}
+#installBanner.show{display:flex}
+@keyframes slideUp{from{transform:translateY(100px);opacity:0}to{transform:translateY(0);opacity:1}}
+.install-text{flex:1}
+.install-text-title{font-weight:700;font-size:14px}
+.install-text-sub{font-size:11px;opacity:.9;margin-top:4px;line-height:1.4}
+.install-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-install{background:#fff;color:#0a2e2a;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn-dismiss{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);padding:10px 14px;border-radius:8px;font-size:13px;cursor:pointer}
+#floatingInstallBtn{display:none;position:fixed;bottom:20px;right:20px;z-index:9996;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:50%;width:60px;height:60px;font-size:28px;cursor:pointer;box-shadow:0 8px 24px rgba(16,185,129,.5);transition:all .3s;animation:pulse 2s infinite}
+#floatingInstallBtn:hover{transform:scale(1.1)}
+@keyframes pulse{0%,100%{box-shadow:0 8px 24px rgba(16,185,129,.5)}50%{box-shadow:0 8px 24px rgba(16,185,129,.9),0 0 0 10px rgba(16,185,129,.1)}}
+.install-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:none;align-items:center;justify-content:center;padding:20px}
+.install-modal.show{display:flex}
+.install-modal-content{background:var(--bg-card);border:2px solid var(--emerald);border-radius:20px;padding:30px;max-width:420px;width:100%;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.install-modal-icon{text-align:center;font-size:60px;margin-bottom:16px}
+.install-modal-title{color:var(--emerald-light);text-align:center;margin-bottom:20px;font-size:20px;font-weight:800}
+.install-modal-steps p{margin:8px 0;line-height:1.6;font-size:14px}
+.install-modal-steps b{color:var(--emerald-light)}
+.install-modal-success{margin-top:16px;padding:12px;background:rgba(16,185,129,.15);border-radius:8px;color:var(--emerald-light);text-align:center;font-weight:700}
+.install-modal-close{width:100%;margin-top:24px;padding:14px;background:linear-gradient(135deg,var(--emerald),var(--emerald-dark));color:#fff;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo" id="loginLogo">🧭</div>
+    <div class="login-title">SubTopo Engineering</div>
+    <div class="login-sub" id="loginSub">Qibla Calculator — Accès protégé</div>
+    <div class="lang-select">
+      <button class="lang-btn active" data-lang="fr" onclick="setLang('fr')">🇫🇷 FR</button>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+    </div>
+    <input type="password" id="pwdInput" placeholder="••••••••••" autocomplete="off">
+    <button class="login-btn" id="loginBtn" onclick="tryLogin()">🔓 SE CONNECTER</button>
+    <div class="login-error" id="pwdError"></div>
+    <div class="login-footer">© 2025 SubTopo Engineering — <b style="color:var(--emerald-light)">NASRAOUI FATHI</b></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title" id="settingsTitle">⚙️ Paramètres</div>
+    <div class="field">
+      <label id="settingsLogoLabel">Logo société (PDF)</label>
+      <div class="logo-preview" id="logoPreview">📷</div>
+      <div class="file-input-wrapper">
+        <label for="logoFile" class="file-input-label" id="settingsUploadLabel">📤 Uploader un logo</label>
+        <input type="file" id="logoFile" accept="image/*">
+      </div>
+    </div>
+    <div class="field">
+      <label id="settingsCompanyLabel">Nom société</label>
+      <input type="text" id="companyName" placeholder="SubTopo Engineering">
+    </div>
+    <div class="field">
+      <label id="settingsInfoLabel">Infos société</label>
+      <input type="text" id="companyInfo" placeholder="Tél / Email / Adresse">
+    </div>
+    <div class="field">
+      <label id="settingsLangLabel">🌍 Langue</label>
+      <select id="langSelect" onchange="setLang(this.value)">
+        <option value="fr">🇫🇷 Français</option>
+        <option value="en">🇬🇧 English</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="settingsSaveBtn" onclick="saveSettings()">💾 Sauvegarder</button>
+    <button class="btn btn-outline" id="settingsCloseBtn" onclick="closeSettings()">✖️ Fermer</button>
+  </div>
+</div>
+
+<!-- INSTALL MODAL -->
+<div class="install-modal" id="installModal">
+  <div class="install-modal-content">
+    <div class="install-modal-icon" id="installModalIcon">📱</div>
+    <div class="install-modal-title" id="installModalTitle">Installer l'application</div>
+    <div class="install-modal-steps" id="installModalSteps"></div>
+    <div class="install-modal-success" id="installModalSuccess">✅ Une fois installée, fonctionne hors-ligne !</div>
+    <button class="install-modal-close" id="installModalClose" onclick="closeInstallModal()">✅ J'AI COMPRIS</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon" id="headerLogo">🧭</div>
+    <div class="logo-text">
+      <h1>SubTopo Engineering</h1>
+      <p id="headerSub">Qibla Calculator · UTM Field Stakeout</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="developer-badge">
+      <div class="by">Developed by</div>
+      <div class="name">NASRAOUI FATHI</div>
+    </div>
+    <button class="icon-btn" onclick="openSettings()" title="Settings">⚙️</button>
+    <button class="icon-btn" onclick="logout()" title="Quit">🚪</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="input">📍 Input</button>
+  <button class="tab" data-tab="result">📐 Result</button>
+  <button class="tab" data-tab="map">🗺️ Map</button>
+  <button class="tab" data-tab="stakeout">📏 Stakeout</button>
+  <button class="tab" data-tab="offset">↔️ Offset</button>
+  <button class="tab" data-tab="compass">🧭 Compass</button>
+  <button class="tab" data-tab="export">📤 Export</button>
+</nav>
+
+<!-- INPUT -->
+<section id="input" class="panel active">
+  <div class="card">
+    <div class="card-title" id="inputTitle">Coordonnées du point</div>
+    <div class="segment">
+      <button id="modeXY" class="active">X, Y (métrique)</button>
+      <button id="modeGPS">GPS (Lat / Lng)</button>
+    </div>
+    <div id="utmFields">
+      <div class="row">
+        <div class="field"><label id="labelEasting">X — Easting (m)</label>
+          <input type="number" id="easting" step="0.001" placeholder="368838.270"></div>
+        <div class="field"><label id="labelNorthing">Y — Northing (m)</label>
+          <input type="number" id="northing" step="0.001" placeholder="3355642.896"></div>
+      </div>
+      <div class="field"><label id="labelProjection">Projection</label>
+        <select id="utmZone">
+          <option value="30N">UTM Zone 30N</option><option value="31N">UTM Zone 31N</option>
+          <option value="32N">UTM Zone 32N</option><option value="33N">UTM Zone 33N</option>
+          <option value="34N" selected>UTM Zone 34N</option>
+          <option value="35N">UTM Zone 35N</option><option value="36N">UTM Zone 36N</option>
+          <option value="37N">UTM Zone 37N</option><option value="38N">UTM Zone 38N</option>
+          <option value="39N">UTM Zone 39N</option><option value="40N">UTM Zone 40N</option>
+        </select></div>
+    </div>
+    <div id="gpsFields" style="display:none;">
+      <div class="row">
+        <div class="field"><label id="labelLat">Latitude (°)</label>
+          <input type="number" id="lat" step="0.000001" placeholder="36.806495"></div>
+        <div class="field"><label id="labelLng">Longitude (°)</label>
+          <input type="number" id="lng" step="0.000001" placeholder="10.181532"></div>
+      </div>
+    </div>
+    <div class="field"><label id="labelSite">Nom du Site / Point</label>
+      <input type="text" id="siteName" placeholder="ex: Mosquée Site A"></div>
+    <button class="btn btn-primary" id="gpsBtn">📡 Capture GPS automatique</button>
+    <button class="btn btn-outline" id="calcBtn">✨ Calculer la Direction Qibla</button>
+  </div>
+</section>
+
+<!-- RESULT -->
+<section id="result" class="panel">
+  <div id="resultContent">
+    <div class="card"><div class="empty"><span>📐</span>
+      <p id="resultEmptyMsg">Aucun calcul effectué</p>
+      <p id="resultEmptySub" style="font-size:12px;margin-top:8px;">Saisissez vos coordonnées dans Input</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section id="map" class="panel">
+  <div class="card">
+    <div class="card-title" id="mapTitle">🗺️ Carte interactive</div>
+    <div id="mapView"></div>
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="btn btn-primary btn-sm" id="mapRecenterBtn" onclick="recenterMap()">🎯 Recentrer</button>
+      <button class="btn btn-outline btn-sm" id="mapSatBtn" onclick="toggleSatellite()">🛰️ Satellite/Carte</button>
+    </div>
+  </div>
+</section>
+
+<!-- STAKEOUT -->
+<section id="stakeout" class="panel">
+  <div class="card">
+    <div class="card-title" id="stakeTitle">📏 Ligne d'implantation Qibla</div>
+    <div class="row">
+      <div class="field"><label id="stakeLengthLabel">Longueur ligne (m)</label>
+        <input type="number" id="stakeLength" value="50" min="5" max="500" step="5"></div>
+      <div class="field"><label id="stakeStepLabel">Espacement piquets (m)</label>
+        <input type="number" id="stakeStep" value="5" min="1" max="50" step="1"></div>
+    </div>
+    <button class="btn btn-primary" id="stakeBtn" onclick="generateStakeout()">📐 Générer Stakeout</button>
+    <div id="stakeoutResult"></div>
+  </div>
+</section>
+
+<!-- OFFSET -->
+<section id="offset" class="panel">
+  <div class="card">
+    <div class="card-title" id="offsetTitle">↔️ Ligne parallèle (Offset)</div>
+    <div class="field">
+      <label id="offsetDistLabel">Distance d'offset (m)</label>
+      <input type="number" id="offsetDist" value="5" min="0.1" max="500" step="0.1">
+    </div>
+    <div class="field">
+      <label id="offsetSideLabel">Côté de l'offset</label>
+      <div class="segment">
+        <button id="offsetLeftBtn" class="active" onclick="selectOffsetSide('left')">◀ Gauche</button>
+        <button id="offsetRightBtn" onclick="selectOffsetSide('right')">Droite ▶</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label id="offsetLengthLabel">Longueur ligne (m)</label>
+        <input type="number" id="offsetLength" value="50" min="5" max="500" step="5"></div>
+      <div class="field"><label id="offsetStepLabel">Espacement (m)</label>
+        <input type="number" id="offsetStep" value="5" min="1" max="50" step="1"></div>
+    </div>
+    <button class="btn btn-primary" id="offsetGenBtn" onclick="generateOffset()">↔️ Générer Offset</button>
+    <div id="offsetResult"></div>
+  </div>
+</section>
+
+<!-- COMPASS -->
+<section id="compass" class="panel">
+  <div class="card">
+    <div class="card-title" id="compassTitle">🧭 Boussole Qibla en temps réel</div>
+    <div class="compass-wrap">
+      <div class="compass-disc" id="compassDisc">
+        <div class="compass-letter N">N</div><div class="compass-letter S">S</div>
+        <div class="compass-letter E">E</div><div class="compass-letter W">W</div>
+      </div>
+      <div class="qibla-arrow" id="qiblaArrow">🕋</div>
+      <div class="compass-center"></div>
+    </div>
+    <div class="heading-info">
+      <div class="heading-value" id="headingValue">--°</div>
+      <div class="heading-label" id="compassHeadingLabel">Heading actuel</div>
+    </div>
+    <button class="btn btn-primary" id="enableCompass">🔓 Activer la boussole</button>
+    <div id="compassStatus"></div>
+  </div>
+</section>
+
+<!-- EXPORT -->
+<section id="export" class="panel">
+  <div class="card">
+    <div class="card-title" id="exportTitle">📤 Export des résultats</div>
+    <button class="btn btn-primary" id="exportPDFBtn" onclick="exportData('pdf')">📑 Export PDF (avec carte)</button>
+    <button class="btn btn-primary" id="exportDXFBtn" onclick="exportData('dxf')">📐 Export DXF (AutoCAD)</button>
+    <button class="btn btn-primary" id="exportKMLBtn" onclick="exportData('kml')">🌍 Export KML (Google Earth)</button>
+    <button class="btn btn-primary" id="exportCSVBtn" onclick="exportData('csv')">📊 Export CSV (Excel)</button>
+    <button class="btn btn-outline" id="exportTXTBtn" onclick="exportData('txt')">📋 Rapport texte</button>
+  </div>
+  <div class="card">
+    <div class="card-title" id="exportFormatsTitle">ℹ️ Formats supportés</div>
+    <div class="info-row"><b>📑 PDF</b><span id="fmtPDF">Adobe, navigateurs</span></div>
+    <div class="info-row"><b>📐 DXF</b><span id="fmtDXF">AutoCAD, Civil 3D, Covadis</span></div>
+    <div class="info-row"><b>🌍 KML</b><span id="fmtKML">Google Earth, QGIS</span></div>
+    <div class="info-row"><b>📊 CSV</b><span id="fmtCSV">Excel, LibreOffice</span></div>
+    <div class="info-row"><b>📋 TXT</b><span id="fmtTXT">Rapport imprimable</span></div>
+  </div>
+</section>
+
+<footer>© 2025 SubTopo Engineering — Developed by <b>NASRAOUI FATHI</b></footer>
+<div class="toast" id="toast"></div>
+
+<!-- INSTALL BANNER -->
+<div id="installBanner">
+  <div class="install-text">
+    <div class="install-text-title" id="installBannerTitle">📱 Installer SubTopo Qibla</div>
+    <div class="install-text-sub" id="installSub">Fonctionne hors-ligne, comme une vraie app</div>
+  </div>
+  <div class="install-actions">
+    <button class="btn-install" id="installBtn">INSTALLER</button>
+    <button class="btn-dismiss" id="dismissBtn">✖</button>
+  </div>
+</div>
+<button id="floatingInstallBtn" title="Installer l'application">📲</button>
+
+<script>
+// =============================================
+// TRANSLATIONS — FULL BILINGUAL FR / EN
+// =============================================
+const T = {
+  fr: {
+    loginSub: "Qibla Calculator — Accès protégé",
+    loginBtn: "🔓 SE CONNECTER",
+    loginErr: "❌ Mot de passe incorrect",
+    headerSub: "Qibla Calculator · Implantation UTM",
+    settingsTitle: "⚙️ Paramètres",
+    settingsLogoLabel: "Logo société (PDF)",
+    settingsUploadLabel: "📤 Uploader un logo",
+    settingsCompanyLabel: "Nom société",
+    settingsInfoLabel: "Infos société",
+    settingsLangLabel: "🌍 Langue",
+    settingsSaveBtn: "💾 Sauvegarder",
+    settingsCloseBtn: "✖️ Fermer",
+    settingsSaved: "✅ Sauvegardé",
+    inputTitle: "Coordonnées du point",
+    modeXY: "X, Y (métrique)",
+    modeGPS: "GPS (Lat / Lng)",
+    labelEasting: "X — Easting (m)",
+    labelNorthing: "Y — Northing (m)",
+    labelProjection: "Projection",
+    labelLat: "Latitude (°)",
+    labelLng: "Longitude (°)",
+    labelSite: "Nom du Site / Point",
+    sitePlaceholder: "ex: Mosquée Site A",
+    gpsBtn: "📡 Capture GPS automatique",
+    calcBtn: "✨ Calculer la Direction Qibla",
+    gpsCapture: "📡 Capture GPS...",
+    gpsDone: "✅ GPS capturé",
+    gpsError: "❌ GPS non supporté",
+    coordError: "❌ Coordonnées invalides",
+    projError: "❌ Erreur projection",
+    resultEmptyMsg: "Aucun calcul effectué",
+    resultEmptySub: "Saisissez vos coordonnées dans Input",
+    qiblaLabel: "Azimut Qibla",
+    calcOk: "✅ Qibla calculée",
+    mapTitle: "🗺️ Carte interactive",
+    mapRecenterBtn: "🎯 Recentrer",
+    mapSatBtn: "🛰️ Satellite/Carte",
+    mapEmpty: "Calculez d'abord",
+    mapSat: "🛰️ Satellite",
+    mapOsm: "🗺️ Carte",
+    stakeTitle: "📏 Ligne d'implantation Qibla",
+    stakeLengthLabel: "Longueur ligne (m)",
+    stakeStepLabel: "Espacement piquets (m)",
+    stakeBtn: "📐 Générer Stakeout",
+    stakeNoResult: "❌ Calculez d'abord",
+    stakeNoUTM: "❌ Coordonnées UTM manquantes",
+    stakeInvalid: "❌ Paramètres invalides",
+    stakeDepart: "📍 Départ",
+    stakeAzimut: "🧭 Azimut",
+    stakeLongueur: "📏 Longueur",
+    stakePiquets: "🔢 Piquets",
+    stakeEsp: "📐 Espacement",
+    stakeOk: "✅ piquets générés",
+    stakeNone: "❌ Aucun piquet",
+    offsetTitle: "↔️ Ligne parallèle (Offset)",
+    offsetDistLabel: "Distance d'offset (m)",
+    offsetSideLabel: "Côté de l'offset",
+    offsetLeftBtn: "◀ Gauche",
+    offsetRightBtn: "Droite ▶",
+    offsetLengthLabel: "Longueur ligne (m)",
+    offsetStepLabel: "Espacement (m)",
+    offsetGenBtn: "↔️ Générer Offset",
+    offsetNoResult: "❌ Calculez d'abord la Qibla",
+    offsetInvalid: "❌ Paramètres invalides",
+    offsetOk: "✅ Offset généré",
+    offsetStart: "📍 Départ Offset",
+    offsetAzimut: "🧭 Azimut",
+    offsetSide: "↔️ Côté",
+    offsetDist: "📏 Distance offset",
+    offsetLength: "📐 Longueur",
+    offsetPts: "🔢 Piquets",
+    offsetLeft: "GAUCHE",
+    offsetRight: "DROITE",
+    compassTitle: "🧭 Boussole Qibla en temps réel",
+    compassHeadingLabel: "Heading actuel",
+    enableCompass: "🔓 Activer la boussole",
+    compassOk: "✅ Boussole active",
+    compassDenied: "⚠️ Permission refusée",
+    compassNo: "⚠️ Non supporté",
+    compassToast: "🧭 Boussole activée",
+    exportTitle: "📤 Export des résultats",
+    exportPDFBtn: "📑 Export PDF (avec carte)",
+    exportDXFBtn: "📐 Export DXF (AutoCAD)",
+    exportKMLBtn: "🌍 Export KML (Google Earth)",
+    exportCSVBtn: "📊 Export CSV (Excel)",
+    exportTXTBtn: "📋 Rapport texte",
+    exportFormatsTitle: "ℹ️ Formats supportés",
+    fmtPDF: "Adobe, navigateurs",
+    fmtDXF: "AutoCAD, Civil 3D, Covadis",
+    fmtKML: "Google Earth, QGIS",
+    fmtCSV: "Excel, LibreOffice",
+    fmtTXT: "Rapport imprimable",
+    exportNoResult: "❌ Aucun résultat",
+    exportPDFGen: "📸 Génération PDF...",
+    exportPDFOk: "✅ PDF généré",
+    installBannerTitle: "📱 Installer SubTopo Qibla",
+    installSub: "Fonctionne hors-ligne, comme une vraie app",
+    installBtn: "INSTALLER",
+    installComment: "COMMENT ?",
+    installModalTitle: "Installer l'application",
+    installModalSuccess: "✅ Une fois installée, fonctionne hors-ligne !",
+    installModalClose: "✅ J'AI COMPRIS",
+    installOk: "✅ Installation en cours...",
+    appInstalled: "🎉 Application installée !",
+    logoutConfirm: "Quitter ?",
+    pdfTitle: "RAPPORT DE CALCUL QIBLA",
+    pdfSecSite: "INFORMATIONS DU SITE",
+    pdfSecCoord: "COORDONNEES",
+    pdfSecQibla: "QIBLA",
+    pdfSecMap: "CARTE QIBLA",
+    pdfSecStake: "POINTS D'IMPLANTATION",
+    pdfAzimutLabel: "AZIMUT QIBLA",
+    pdfSite: "Site :", pdfDate: "Date :",
+    pdfLat: "Latitude :", pdfLng: "Longitude :",
+    pdfX: "X Easting :", pdfY: "Y Northing :", pdfZone: "Projection :",
+    pdfAzimut: "Azimut :", pdfDir: "Direction :", pdfDist: "Distance :",
+    resDetails: "📊 Détails", resSite: "📍 Site",
+    resLat: "Latitude", resLng: "Longitude",
+    resX: "X Easting", resY: "Y Northing",
+    resDist: "🕋 Distance", resDir: "🧭 Direction",
+    resDate: "📅 Date", resMiles: "miles"
+  },
+  en: {
+    loginSub: "Qibla Calculator — Protected Access",
+    loginBtn: "🔓 LOGIN",
+    loginErr: "❌ Incorrect password",
+    headerSub: "Qibla Calculator · UTM Field Stakeout",
+    settingsTitle: "⚙️ Settings",
+    settingsLogoLabel: "Company logo (PDF)",
+    settingsUploadLabel: "📤 Upload a logo",
+    settingsCompanyLabel: "Company name",
+    settingsInfoLabel: "Company info",
+    settingsLangLabel: "🌍 Language",
+    settingsSaveBtn: "💾 Save",
+    settingsCloseBtn: "✖️ Close",
+    settingsSaved: "✅ Saved",
+    inputTitle: "Point Coordinates",
+    modeXY: "X, Y (metric)",
+    modeGPS: "GPS (Lat / Lng)",
+    labelEasting: "X — Easting (m)",
+    labelNorthing: "Y — Northing (m)",
+    labelProjection: "Projection",
+    labelLat: "Latitude (°)",
+    labelLng: "Longitude (°)",
+    labelSite: "Site / Point Name",
+    sitePlaceholder: "e.g. Mosque Site A",
+    gpsBtn: "📡 Auto GPS Capture",
+    calcBtn: "✨ Calculate Qibla Direction",
+    gpsCapture: "📡 GPS capturing...",
+    gpsDone: "✅ GPS captured",
+    gpsError: "❌ GPS not supported",
+    coordError: "❌ Invalid coordinates",
+    projError: "❌ Projection error",
+    resultEmptyMsg: "No calculation yet",
+    resultEmptySub: "Enter your coordinates in Input",
+    qiblaLabel: "Qibla Azimuth",
+    calcOk: "✅ Qibla calculated",
+    mapTitle: "🗺️ Interactive Map",
+    mapRecenterBtn: "🎯 Recenter",
+    mapSatBtn: "🛰️ Satellite/Map",
+    mapEmpty: "Calculate first",
+    mapSat: "🛰️ Satellite",
+    mapOsm: "🗺️ Map",
+    stakeTitle: "📏 Qibla Stakeout Line",
+    stakeLengthLabel: "Line length (m)",
+    stakeStepLabel: "Stake spacing (m)",
+    stakeBtn: "📐 Generate Stakeout",
+    stakeNoResult: "❌ Calculate first",
+    stakeNoUTM: "❌ UTM coordinates missing",
+    stakeInvalid: "❌ Invalid parameters",
+    stakeDepart: "📍 Start",
+    stakeAzimut: "🧭 Azimuth",
+    stakeLongueur: "📏 Length",
+    stakePiquets: "🔢 Stakes",
+    stakeEsp: "📐 Spacing",
+    stakeOk: "✅ stakes generated",
+    stakeNone: "❌ No stakes",
+    offsetTitle: "↔️ Parallel Line (Offset)",
+    offsetDistLabel: "Offset distance (m)",
+    offsetSideLabel: "Offset side",
+    offsetLeftBtn: "◀ Left",
+    offsetRightBtn: "Right ▶",
+    offsetLengthLabel: "Line length (m)",
+    offsetStepLabel: "Spacing (m)",
+    offsetGenBtn: "↔️ Generate Offset",
+    offsetNoResult: "❌ Calculate Qibla first",
+    offsetInvalid: "❌ Invalid parameters",
+    offsetOk: "✅ Offset generated",
+    offsetStart: "📍 Offset Start",
+    offsetAzimut: "🧭 Azimuth",
+    offsetSide: "↔️ Side",
+    offsetDist: "📏 Offset distance",
+    offsetLength: "📐 Length",
+    offsetPts: "🔢 Stakes",
+    offsetLeft: "LEFT",
+    offsetRight: "RIGHT",
+    compassTitle: "🧭 Real-time Qibla Compass",
+    compassHeadingLabel: "Current heading",
+    enableCompass: "🔓 Enable compass",
+    compassOk: "✅ Compass active",
+    compassDenied: "⚠️ Permission denied",
+    compassNo: "⚠️ Not supported on this device",
+    compassToast: "🧭 Compass enabled",
+    exportTitle: "📤 Export results",
+    exportPDFBtn: "📑 Export PDF (with map)",
+    exportDXFBtn: "📐 Export DXF (AutoCAD)",
+    exportKMLBtn: "🌍 Export KML (Google Earth)",
+    exportCSVBtn: "📊 Export CSV (Excel)",
+    exportTXTBtn: "📋 Text report",
+    exportFormatsTitle: "ℹ️ Supported formats",
+    fmtPDF: "Adobe, browsers",
+    fmtDXF: "AutoCAD, Civil 3D, Covadis",
+    fmtKML: "Google Earth, QGIS",
+    fmtCSV: "Excel, LibreOffice",
+    fmtTXT: "Printable report",
+    exportNoResult: "❌ No result yet",
+    exportPDFGen: "📸 Generating PDF...",
+    exportPDFOk: "✅ PDF generated",
+    installBannerTitle: "📱 Install SubTopo Qibla",
+    installSub: "Works offline, like a real app",
+    installBtn: "INSTALL",
+    installComment: "HOW?",
+    installModalTitle: "Install the app",
+    installModalSuccess: "✅ Once installed, works offline!",
+    installModalClose: "✅ GOT IT",
+    installOk: "✅ Installing...",
+    appInstalled: "🎉 App installed!",
+    logoutConfirm: "Quit?",
+    pdfTitle: "QIBLA CALCULATION REPORT",
+    pdfSecSite: "SITE INFORMATION",
+    pdfSecCoord: "COORDINATES",
+    pdfSecQibla: "QIBLA",
+    pdfSecMap: "QIBLA MAP",
+    pdfSecStake: "STAKEOUT POINTS",
+    pdfAzimutLabel: "QIBLA AZIMUTH",
+    pdfSite: "Site:", pdfDate: "Date:",
+    pdfLat: "Latitude:", pdfLng: "Longitude:",
+    pdfX: "X Easting:", pdfY: "Y Northing:", pdfZone: "Projection:",
+    pdfAzimut: "Azimuth:", pdfDir: "Direction:", pdfDist: "Distance:",
+    resDetails: "📊 Details", resSite: "📍 Site",
+    resLat: "Latitude", resLng: "Longitude",
+    resX: "X Easting", resY: "Y Northing",
+    resDist: "🕋 Distance", resDir: "🧭 Direction",
+    resDate: "📅 Date", resMiles: "miles"
+  }
+};
+
+// =============================================
+// LANGUAGE ENGINE
+// =============================================
+let currentLang = localStorage.getItem('qibla_lang') || 'fr';
+
+function t(key) { return T[currentLang][key] || T['fr'][key] || key; }
+
+// List of all element IDs to translate (id -> T key)
+const UI_MAP = [
+  ['loginSub','loginSub'], ['loginBtn','loginBtn'],
+  ['headerSub','headerSub'],
+  ['settingsTitle','settingsTitle'],
+  ['settingsLogoLabel','settingsLogoLabel'],
+  ['settingsUploadLabel','settingsUploadLabel'],
+  ['settingsCompanyLabel','settingsCompanyLabel'],
+  ['settingsInfoLabel','settingsInfoLabel'],
+  ['settingsLangLabel','settingsLangLabel'],
+  ['settingsSaveBtn','settingsSaveBtn'],
+  ['settingsCloseBtn','settingsCloseBtn'],
+  ['inputTitle','inputTitle'],
+  ['modeXY','modeXY'], ['modeGPS','modeGPS'],
+  ['labelEasting','labelEasting'], ['labelNorthing','labelNorthing'],
+  ['labelProjection','labelProjection'],
+  ['labelLat','labelLat'], ['labelLng','labelLng'],
+  ['labelSite','labelSite'],
+  ['gpsBtn','gpsBtn'], ['calcBtn','calcBtn'],
+  ['resultEmptyMsg','resultEmptyMsg'],
+  ['resultEmptySub','resultEmptySub'],
+  ['mapTitle','mapTitle'],
+  ['mapRecenterBtn','mapRecenterBtn'], ['mapSatBtn','mapSatBtn'],
+  ['stakeTitle','stakeTitle'],
+  ['stakeLengthLabel','stakeLengthLabel'], ['stakeStepLabel','stakeStepLabel'],
+  ['stakeBtn','stakeBtn'],
+  ['offsetTitle','offsetTitle'],
+  ['offsetDistLabel','offsetDistLabel'], ['offsetSideLabel','offsetSideLabel'],
+  ['offsetLeftBtn','offsetLeftBtn'], ['offsetRightBtn','offsetRightBtn'],
+  ['offsetLengthLabel','offsetLengthLabel'], ['offsetStepLabel','offsetStepLabel'],
+  ['offsetGenBtn','offsetGenBtn'],
+  ['compassTitle','compassTitle'],
+  ['compassHeadingLabel','compassHeadingLabel'],
+  ['enableCompass','enableCompass'],
+  ['exportTitle','exportTitle'],
+  ['exportPDFBtn','exportPDFBtn'], ['exportDXFBtn','exportDXFBtn'],
+  ['exportKMLBtn','exportKMLBtn'], ['exportCSVBtn','exportCSVBtn'],
+  ['exportTXTBtn','exportTXTBtn'],
+  ['exportFormatsTitle','exportFormatsTitle'],
+  ['fmtPDF','fmtPDF'], ['fmtDXF','fmtDXF'],
+  ['fmtKML','fmtKML'], ['fmtCSV','fmtCSV'], ['fmtTXT','fmtTXT'],
+  ['installBannerTitle','installBannerTitle'],
+  ['installSub','installSub'], ['installBtn','installBtn'],
+  ['installModalTitle','installModalTitle'],
+  ['installModalSuccess','installModalSuccess'],
+  ['installModalClose','installModalClose']
+];
+
+function applyLang() {
+  // Update all mapped elements
+  UI_MAP.forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(key);
+  });
+  // Placeholder
+  const siteInput = document.getElementById('siteName');
+  if (siteInput) siteInput.placeholder = t('sitePlaceholder');
+  // Lang buttons
+  document.querySelectorAll('.lang-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.lang === currentLang)
+  );
+  // LangSelect
+  const ls = document.getElementById('langSelect');
+  if (ls) ls.value = currentLang;
+  // HTML lang
+  document.getElementById('htmlRoot').setAttribute('lang', currentLang);
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('qibla_lang', lang);
+  applyLang();
+}
+
+// =============================================
+// SETTINGS
+// =============================================
+let appSettings = JSON.parse(localStorage.getItem('qibla_settings') || '{}');
+function loadSettings() {
+  if (appSettings.logo) {
+    document.getElementById('logoPreview').innerHTML = `<img src="${appSettings.logo}">`;
+    document.getElementById('headerLogo').innerHTML = `<img src="${appSettings.logo}">`;
+    document.getElementById('loginLogo').innerHTML = `<img src="${appSettings.logo}">`;
+  }
+  if (appSettings.companyName) document.getElementById('companyName').value = appSettings.companyName;
+  if (appSettings.companyInfo) document.getElementById('companyInfo').value = appSettings.companyInfo;
+}
+function openSettings() { document.getElementById('settingsModal').classList.add('show'); loadSettings(); }
+function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+function saveSettings() {
+  appSettings.companyName = document.getElementById('companyName').value;
+  appSettings.companyInfo = document.getElementById('companyInfo').value;
+  localStorage.setItem('qibla_settings', JSON.stringify(appSettings));
+  loadSettings(); closeSettings(); toast(t('settingsSaved'));
+}
+document.getElementById('logoFile').addEventListener('change', (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    appSettings.logo = ev.target.result;
+    localStorage.setItem('qibla_settings', JSON.stringify(appSettings));
+    loadSettings(); toast('✅ Logo OK');
+  };
+  reader.readAsDataURL(file);
+});
+
+// =============================================
+// AUTH
+// =============================================
+const APP_PASSWORD = 'Subtopo@2025';
+const SESSION_KEY = 'qibla_auth_v1';
+
+window.addEventListener('DOMContentLoaded', () => {
+  applyLang();
+  loadSettings();
+  if (sessionStorage.getItem(SESSION_KEY) === 'ok') {
+    document.getElementById('loginOverlay').classList.add('hidden');
+  } else {
+    document.getElementById('pwdInput').focus();
+  }
+});
+
+document.getElementById('pwdInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') tryLogin();
+});
+
+function tryLogin() {
+  const v = document.getElementById('pwdInput').value;
+  const err = document.getElementById('pwdError');
+  if (v === APP_PASSWORD) {
+    sessionStorage.setItem(SESSION_KEY, 'ok');
+    document.getElementById('loginOverlay').classList.add('hidden');
+    setTimeout(() => toast('✅ ' + (currentLang === 'en' ? 'Welcome!' : 'Bienvenue !')), 300);
+  } else {
+    err.textContent = t('loginErr');
+    document.getElementById('pwdInput').value = '';
+    setTimeout(() => err.textContent = '', 3000);
+  }
+}
+
+function logout() {
+  if (confirm(t('logoutConfirm'))) { sessionStorage.removeItem(SESSION_KEY); location.reload(); }
+}
+
+// =============================================
+// CORE MATH
+// =============================================
+const KAABA = { lat: 21.4225, lng: 39.8262 };
+let lastResult = null, stakeoutPoints = [], offsetPoints = [];
+let map, satelliteLayer, osmLayer, isSat = false;
+let offsetSide = 'left';
+
+function toast(msg, dur = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+function getUTMProj(zone) {
+  const num = parseInt(zone);
+  const hemi = zone.includes('S') ? ' +south' : '';
+  return `+proj=utm +zone=${num}${hemi} +datum=WGS84 +units=m +no_defs`;
+}
+function calcBearing(lat, lng) {
+  const f1 = lat * Math.PI / 180, f2 = KAABA.lat * Math.PI / 180;
+  const dl = (KAABA.lng - lng) * Math.PI / 180;
+  const y = Math.sin(dl) * Math.cos(f2);
+  const x = Math.cos(f1) * Math.sin(f2) - Math.sin(f1) * Math.cos(f2) * Math.cos(dl);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+function calcDist(lat, lng) {
+  const R = 6371, f1 = lat * Math.PI / 180, f2 = KAABA.lat * Math.PI / 180;
+  const df = (KAABA.lat - lat) * Math.PI / 180, dl = (KAABA.lng - lng) * Math.PI / 180;
+  const a = Math.sin(df / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function toCardinal(b) {
+  return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(b / 22.5) % 16];
+}
+function toDMS(deg) {
+  const abs = Math.abs(deg), d = Math.floor(abs), m = Math.floor((abs - d) * 60), s = ((abs - d) * 60 - m) * 60;
+  return `${d}° ${m}' ${s.toFixed(2)}"`;
+}
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// =============================================
+// TABS
+// =============================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'map') setTimeout(initMap, 100);
+  });
+});
+
+// =============================================
+// MODE SWITCH
+// =============================================
+document.getElementById('modeXY').addEventListener('click', () => {
+  document.getElementById('modeXY').classList.add('active');
+  document.getElementById('modeGPS').classList.remove('active');
+  document.getElementById('utmFields').style.display = 'block';
+  document.getElementById('gpsFields').style.display = 'none';
+});
+document.getElementById('modeGPS').addEventListener('click', () => {
+  document.getElementById('modeGPS').classList.add('active');
+  document.getElementById('modeXY').classList.remove('active');
+  document.getElementById('utmFields').style.display = 'none';
+  document.getElementById('gpsFields').style.display = 'block';
+});
+
+// =============================================
+// GPS CAPTURE
+// =============================================
+document.getElementById('gpsBtn').addEventListener('click', () => {
+  if (!navigator.geolocation) return toast(t('gpsError'));
+  toast(t('gpsCapture'));
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    const isGPS = document.getElementById('modeGPS').classList.contains('active');
+    if (isGPS) {
+      document.getElementById('lat').value = latitude.toFixed(6);
+      document.getElementById('lng').value = longitude.toFixed(6);
+    } else {
+      const zone = document.getElementById('utmZone').value;
+      try {
+        const [x, y] = proj4('WGS84', getUTMProj(zone), [longitude, latitude]);
+        document.getElementById('easting').value = x.toFixed(3);
+        document.getElementById('northing').value = y.toFixed(3);
+      } catch(e) { return toast(t('projError')); }
+    }
+    toast(`${t('gpsDone')} (±${pos.coords.accuracy.toFixed(0)}m)`);
+  }, err => toast('❌ ' + err.message), { enableHighAccuracy: true, timeout: 10000 });
+});
+
+// =============================================
+// CALCULATE QIBLA
+// =============================================
+document.getElementById('calcBtn').addEventListener('click', () => {
+  let lat, lng, x = null, y = null, zone = null;
+  const isGPS = document.getElementById('modeGPS').classList.contains('active');
+  if (isGPS) {
+    lat = parseFloat(document.getElementById('lat').value);
+    lng = parseFloat(document.getElementById('lng').value);
+    if (isNaN(lat) || isNaN(lng)) return toast(t('coordError'));
+  } else {
+    x = parseFloat(document.getElementById('easting').value);
+    y = parseFloat(document.getElementById('northing').value);
+    zone = document.getElementById('utmZone').value;
+    if (isNaN(x) || isNaN(y)) return toast(t('coordError'));
+    try { const r = proj4(getUTMProj(zone), 'WGS84', [x, y]); lng = r[0]; lat = r[1]; }
+    catch(e) { return toast(t('projError')); }
+  }
+  if (isGPS) {
+    zone = document.getElementById('utmZone').value;
+    try { const r = proj4('WGS84', getUTMProj(zone), [lng, lat]); x = r[0]; y = r[1]; } catch(e){}
+  }
+  const bearing = calcBearing(lat, lng);
+  const dist = calcDist(lat, lng);
+  const cardinal = toCardinal(bearing);
+  const site = document.getElementById('siteName').value || '—';
+  const locale = currentLang === 'en' ? 'en-GB' : 'fr-FR';
+  lastResult = { lat, lng, x, y, zone, bearing, dist, cardinal, site, date: new Date().toISOString() };
+  document.getElementById('resultContent').innerHTML = `
+    <div class="qibla-big">
+      <div class="qibla-angle">${bearing.toFixed(2)}°</div>
+      <div class="qibla-label">${t('qiblaLabel')} · ${cardinal}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">${t('resDetails')}</div>
+      <div class="result-grid">
+        <div class="result-item full"><div class="result-label">${t('resSite')}</div><div class="result-value">${site}</div></div>
+        <div class="result-item"><div class="result-label">${t('resLat')}</div>
+          <div class="result-value">${lat.toFixed(6)}°</div>
+          <div class="result-sub">${toDMS(lat)} ${lat >= 0 ? 'N' : 'S'}</div></div>
+        <div class="result-item"><div class="result-label">${t('resLng')}</div>
+          <div class="result-value">${lng.toFixed(6)}°</div>
+          <div class="result-sub">${toDMS(lng)} ${lng >= 0 ? 'E' : 'W'}</div></div>
+        <div class="result-item"><div class="result-label">${t('resX')}</div>
+          <div class="result-value">${x ? x.toFixed(3) : '-'}</div>
+          <div class="result-sub">${zone || '-'}</div></div>
+        <div class="result-item"><div class="result-label">${t('resY')}</div>
+          <div class="result-value">${y ? y.toFixed(3) : '-'}</div>
+          <div class="result-sub">UTM</div></div>
+        <div class="result-item"><div class="result-label">${t('resDist')}</div>
+          <div class="result-value">${dist.toFixed(1)} km</div>
+          <div class="result-sub">${(dist * 0.621371).toFixed(1)} ${t('resMiles')}</div></div>
+        <div class="result-item"><div class="result-label">${t('resDir')}</div>
+          <div class="result-value">${cardinal}</div>
+          <div class="result-sub">${bearing.toFixed(4)}°</div></div>
+        <div class="result-item full"><div class="result-label">${t('resDate')}</div>
+          <div class="result-value" style="font-size:14px;">${new Date().toLocaleString(locale)}</div></div>
+      </div>
+    </div>`;
+  document.getElementById('qiblaArrow').style.transform = `translate(-50%,-180px) rotate(${bearing}deg)`;
+  toast(t('calcOk'));
+  document.querySelector('[data-tab="result"]').click();
+});
+
+// =============================================
+// MAP
+// =============================================
+function initMap() {
+  if (!lastResult) {
+    document.getElementById('mapView').innerHTML =
+      `<div class="empty" style="padding-top:200px;"><span>🗺️</span><p>${t('mapEmpty')}</p></div>`;
+    return;
+  }
+  if (map) { map.remove(); map = null; }
+  map = L.map('mapView').setView([lastResult.lat, lastResult.lng], 6);
+  osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution: '© OpenStreetMap', maxZoom: 19, crossOrigin: true }).addTo(map);
+  satelliteLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { attribution: '© Esri', maxZoom: 19, crossOrigin: true });
+  const myIcon = L.divIcon({
+    html: '<div style="background:#10b981;border:3px solid #fff;border-radius:50%;width:24px;height:24px;box-shadow:0 0 0 4px rgba(16,185,129,.4);"></div>',
+    className: '', iconSize: [24, 24], iconAnchor: [12, 12]
+  });
+  L.marker([lastResult.lat, lastResult.lng], { icon: myIcon }).addTo(map)
+    .bindPopup(`<b>📍 ${lastResult.site}</b><br>Qibla: ${lastResult.bearing.toFixed(2)}°`);
+  const kaabaIcon = L.divIcon({ html: '<div style="font-size:32px;">🕋</div>', className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
+  L.marker([KAABA.lat, KAABA.lng], { icon: kaabaIcon }).addTo(map).bindPopup('<b>🕋 Kaaba</b>');
+  const pts = gcPoints(lastResult.lat, lastResult.lng, KAABA.lat, KAABA.lng, 100);
+  L.polyline(pts, { color: '#10b981', weight: 5, opacity: .9 }).addTo(map);
+  L.polyline(pts, { color: '#fff', weight: 2, opacity: .8, dashArray: '8,8' }).addTo(map);
+  map.fitBounds([[lastResult.lat, lastResult.lng], [KAABA.lat, KAABA.lng]], { padding: [40, 40] });
+  setTimeout(() => map.invalidateSize(), 200);
+}
+function gcPoints(lat1, lng1, lat2, lng2, n) {
+  const pts = [], f1 = lat1 * Math.PI / 180, l1 = lng1 * Math.PI / 180;
+  const f2 = lat2 * Math.PI / 180, l2 = lng2 * Math.PI / 180;
+  const d = 2 * Math.asin(Math.sqrt(Math.sin((f2 - f1) / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin((l2 - l1) / 2) ** 2));
+  for (let i = 0; i <= n; i++) {
+    const f = i / n, A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+    const x = A * Math.cos(f1) * Math.cos(l1) + B * Math.cos(f2) * Math.cos(l2);
+    const y = A * Math.cos(f1) * Math.sin(l1) + B * Math.cos(f2) * Math.sin(l2);
+    const z = A * Math.sin(f1) + B * Math.sin(f2);
+    pts.push([Math.atan2(z, Math.sqrt(x * x + y * y)) * 180 / Math.PI, Math.atan2(y, x) * 180 / Math.PI]);
+  }
+  return pts;
+}
+function recenterMap() { if (map && lastResult) map.setView([lastResult.lat, lastResult.lng], 15); }
+function toggleSatellite() {
+  if (!map) return;
+  isSat = !isSat;
+  if (isSat) { map.removeLayer(osmLayer); map.addLayer(satelliteLayer); toast(t('mapSat')); }
+  else { map.removeLayer(satelliteLayer); map.addLayer(osmLayer); toast(t('mapOsm')); }
+}
+
+// =============================================
+// STAKEOUT
+// =============================================
+function generateStakeout() {
+  if (!lastResult) return toast(t('stakeNoResult'));
+  if (!lastResult.x || !lastResult.y) return toast(t('stakeNoUTM'));
+  const length = parseFloat(document.getElementById('stakeLength').value);
+  const step = parseFloat(document.getElementById('stakeStep').value);
+  if (length <= 0 || step <= 0 || step > length) return toast(t('stakeInvalid'));
+  const theta = lastResult.bearing * Math.PI / 180;
+  stakeoutPoints = [];
+  for (let n = 0, d = 0; d <= length; d += step, n++) {
+    const px = lastResult.x + Math.sin(theta) * d;
+    const py = lastResult.y + Math.cos(theta) * d;
+    let lat = null, lng = null;
+    try { const r = proj4(getUTMProj(lastResult.zone), 'WGS84', [px, py]); lng = r[0]; lat = r[1]; } catch(e){}
+    stakeoutPoints.push({ n, dist: d, x: px, y: py, lat, lng });
+  }
+  let html = `
+    <div class="info-row"><b>${t('stakeDepart')}</b><span>P0 (${lastResult.x.toFixed(2)}, ${lastResult.y.toFixed(2)})</span></div>
+    <div class="info-row"><b>${t('stakeAzimut')}</b><span>${lastResult.bearing.toFixed(4)}°</span></div>
+    <div class="info-row"><b>${t('stakeLongueur')}</b><span>${length} m</span></div>
+    <div class="info-row"><b>${t('stakePiquets')}</b><span>${stakeoutPoints.length}</span></div>
+    <div class="info-row"><b>${t('stakeEsp')}</b><span>${step} m</span></div>
+    <div style="overflow-x:auto;"><table class="stakeout-table">
+      <thead><tr><th>N°</th><th>Dist</th><th>X (E)</th><th>Y (N)</th><th>Lat</th><th>Lng</th></tr></thead><tbody>`;
+  stakeoutPoints.forEach(p => {
+    html += `<tr><td><b>P${p.n}</b></td><td>${p.dist.toFixed(1)}</td><td>${p.x.toFixed(3)}</td><td>${p.y.toFixed(3)}</td><td>${p.lat ? p.lat.toFixed(6) : '-'}</td><td>${p.lng ? p.lng.toFixed(6) : '-'}</td></tr>`;
+  });
+  html += `</tbody></table></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+      <button class="btn btn-primary btn-sm" onclick="exportStakeout('csv')">📊 CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="exportStakeout('dxf')">📐 DXF</button>
+    </div>`;
+  document.getElementById('stakeoutResult').innerHTML = html;
+  toast(`${stakeoutPoints.length} ${t('stakeOk')}`);
+}
+function exportStakeout(format) {
+  if (!stakeoutPoints.length) return toast(t('stakeNone'));
+  let content, filename, mime;
+  if (format === 'csv') {
+    content = 'Point,Distance(m),X_Easting,Y_Northing,Latitude,Longitude\n';
+    stakeoutPoints.forEach(p => { content += `P${p.n},${p.dist.toFixed(2)},${p.x.toFixed(3)},${p.y.toFixed(3)},${p.lat ? p.lat.toFixed(6) : ''},${p.lng ? p.lng.toFixed(6) : ''}\n`; });
+    filename = `stakeout-${Date.now()}.csv`; mime = 'text/csv';
+  } else {
+    content = buildDXF(stakeoutPoints, true);
+    filename = `stakeout-${Date.now()}.dxf`; mime = 'application/dxf';
+  }
+  downloadFile(content, filename, mime);
+  toast(`✅ ${format.toUpperCase()} OK`);
+}
+
+// =============================================
+// OFFSET
+// =============================================
+function selectOffsetSide(side) {
+  offsetSide = side;
+  document.getElementById('offsetLeftBtn').classList.toggle('active', side === 'left');
+  document.getElementById('offsetRightBtn').classList.toggle('active', side === 'right');
+}
+function generateOffset() {
+  if (!lastResult) return toast(t('offsetNoResult'));
+  if (!lastResult.x || !lastResult.y) return toast(t('offsetNoResult'));
+  const dist = parseFloat(document.getElementById('offsetDist').value);
+  const length = parseFloat(document.getElementById('offsetLength').value);
+  const step = parseFloat(document.getElementById('offsetStep').value);
+  if (isNaN(dist) || dist <= 0 || isNaN(length) || isNaN(step) || step <= 0 || step > length)
+    return toast(t('offsetInvalid'));
+  const theta = lastResult.bearing * Math.PI / 180;
+  const perpAngle = (offsetSide === 'left')
+    ? (lastResult.bearing - 90) * Math.PI / 180
+    : (lastResult.bearing + 90) * Math.PI / 180;
+  const ox = lastResult.x + Math.sin(perpAngle) * dist;
+  const oy = lastResult.y + Math.cos(perpAngle) * dist;
+  offsetPoints = [];
+  for (let n = 0, d = 0; d <= length; d += step, n++) {
+    const px = ox + Math.sin(theta) * d;
+    const py = oy + Math.cos(theta) * d;
+    let lat = null, lng = null;
+    try { const r = proj4(getUTMProj(lastResult.zone), 'WGS84', [px, py]); lng = r[0]; lat = r[1]; } catch(e){}
+    offsetPoints.push({ n, dist: d, x: px, y: py, lat, lng });
+  }
+  const sideLabel = offsetSide === 'left' ? t('offsetLeft') : t('offsetRight');
+  let html = `
+    <div class="info-row"><b>${t('offsetStart')}</b><span>${ox.toFixed(3)}, ${oy.toFixed(3)}</span></div>
+    <div class="info-row"><b>${t('offsetAzimut')}</b><span>${lastResult.bearing.toFixed(4)}°</span></div>
+    <div class="info-row"><b>${t('offsetSide')}</b><span>${sideLabel}</span></div>
+    <div class="info-row"><b>${t('offsetDist')}</b><span>${dist} m</span></div>
+    <div class="info-row"><b>${t('offsetLength')}</b><span>${length} m</span></div>
+    <div class="info-row"><b>${t('offsetPts')}</b><span>${offsetPoints.length}</span></div>
+    <div style="overflow-x:auto;"><table class="stakeout-table">
+      <thead><tr><th>N°</th><th>Dist</th><th>X (E)</th><th>Y (N)</th><th>Lat</th><th>Lng</th></tr></thead><tbody>`;
+  offsetPoints.forEach(p => {
+    html += `<tr><td><b>P${p.n}</b></td><td>${p.dist.toFixed(1)}</td><td>${p.x.toFixed(3)}</td><td>${p.y.toFixed(3)}</td><td>${p.lat ? p.lat.toFixed(6) : '-'}</td><td>${p.lng ? p.lng.toFixed(6) : '-'}</td></tr>`;
+  });
+  html += `</tbody></table></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+      <button class="btn btn-primary btn-sm" onclick="exportOffset('csv')">📊 CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="exportOffset('dxf')">📐 DXF</button>
+    </div>`;
+  document.getElementById('offsetResult').innerHTML = html;
+  toast(`${t('offsetOk')} (${offsetPoints.length} pts)`);
+}
+function exportOffset(format) {
+  if (!offsetPoints.length) return toast(t('stakeNone'));
+  const side = offsetSide === 'left' ? 'LEFT' : 'RIGHT';
+  let content, filename, mime;
+  if (format === 'csv') {
+    content = `Point,Distance(m),X_Easting,Y_Northing,Latitude,Longitude,Side\n`;
+    offsetPoints.forEach(p => { content += `P${p.n},${p.dist.toFixed(2)},${p.x.toFixed(3)},${p.y.toFixed(3)},${p.lat ? p.lat.toFixed(6) : ''},${p.lng ? p.lng.toFixed(6) : ''},${side}\n`; });
+    filename = `offset-${side}-${Date.now()}.csv`; mime = 'text/csv';
+  } else {
+    content = buildDXF(offsetPoints, true, `OFFSET_${side}`);
+    filename = `offset-${side}-${Date.now()}.dxf`; mime = 'application/dxf';
+  }
+  downloadFile(content, filename, mime);
+  toast(`✅ ${format.toUpperCase()} OK`);
+}
+
+// =============================================
+// DXF BUILDER
+// =============================================
+function buildDXF(points, withLine = false, layerName = 'QIBLA') {
+  let dxf = '0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n0\nENDSEC\n';
+  dxf += '0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n3\n';
+  dxf += `0\nLAYER\n2\n${layerName}\n70\n0\n62\n3\n6\nCONTINUOUS\n`;
+  dxf += '0\nLAYER\n2\nPOINTS\n70\n0\n62\n1\n6\nCONTINUOUS\n';
+  dxf += '0\nLAYER\n2\nTEXT\n70\n0\n62\n7\n6\nCONTINUOUS\n';
+  dxf += '0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n';
+  if (withLine && points.length > 1) {
+    dxf += `0\nPOLYLINE\n8\n${layerName}\n66\n1\n10\n0\n20\n0\n30\n0\n70\n0\n`;
+    points.forEach(p => { dxf += `0\nVERTEX\n8\n${layerName}\n10\n${p.x.toFixed(3)}\n20\n${p.y.toFixed(3)}\n30\n0\n`; });
+    dxf += '0\nSEQEND\n';
+  }
+  points.forEach(p => {
+    dxf += `0\nPOINT\n8\nPOINTS\n10\n${p.x.toFixed(3)}\n20\n${p.y.toFixed(3)}\n30\n0\n`;
+    dxf += `0\nCIRCLE\n8\nPOINTS\n10\n${p.x.toFixed(3)}\n20\n${p.y.toFixed(3)}\n30\n0\n40\n0.3\n`;
+    dxf += `0\nTEXT\n8\nTEXT\n10\n${(p.x + 0.5).toFixed(3)}\n20\n${(p.y + 0.5).toFixed(3)}\n30\n0\n40\n1.0\n1\nP${p.n}(${p.dist.toFixed(1)}m)\n`;
+  });
+  dxf += '0\nENDSEC\n0\nEOF\n';
+  return dxf;
+}
+
+// =============================================
+// COMPASS
+// =============================================
+document.getElementById('enableCompass').addEventListener('click', async () => {
+  const status = document.getElementById('compassStatus');
+  try {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const p = await DeviceOrientationEvent.requestPermission();
+      if (p !== 'granted') { status.innerHTML = `<div class="status status-warning">${t('compassDenied')}</div>`; return; }
+    }
+    const handler = e => {
+      let heading = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : (360 - (e.alpha || 0));
+      document.getElementById('compassDisc').style.transform = `rotate(${-heading}deg)`;
+      document.getElementById('headingValue').textContent = `${heading.toFixed(0)}°`;
+    };
+    window.addEventListener('deviceorientationabsolute', handler, true);
+    window.addEventListener('deviceorientation', handler, true);
+    status.innerHTML = `<div class="status status-success">${t('compassOk')}</div>`;
+    toast(t('compassToast'));
+  } catch(e) { status.innerHTML = `<div class="status status-warning">${t('compassNo')}</div>`; }
+});
+
+// =============================================
+// EXPORT
+// =============================================
+async function captureMapImage() {
+  return new Promise(async (resolve) => {
+    const mapPanel = document.getElementById('map');
+    const wasActive = mapPanel.classList.contains('active');
+    const currentActive = document.querySelector('.tab.active').dataset.tab;
+    if (!wasActive) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      mapPanel.classList.add('active');
+    }
+    initMap();
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const canvas = await html2canvas(document.getElementById('mapView'), { useCORS: true, allowTaint: true, logging: false, scale: 1.5 });
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    } catch(e) { resolve(null); }
+    finally {
+      if (!wasActive) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(currentActive).classList.add('active');
+      }
+    }
+  });
+}
+async function exportPDF() {
+  if (!lastResult) return toast(t('exportNoResult'));
+  toast(t('exportPDFGen'));
+  const r = lastResult;
+  const mapImg = await captureMapImage();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const emerald = [16, 185, 129], dark = [10, 46, 42], soft = [167, 243, 208];
+  doc.setFillColor(...dark); doc.rect(0, 0, 210, 35, 'F');
+  doc.setFillColor(...emerald); doc.rect(0, 35, 210, 2, 'F');
+  if (appSettings.logo) {
+    try { doc.addImage(appSettings.logo, 'PNG', 15, 8, 20, 20); }
+    catch(e) { doc.setFillColor(255, 255, 255); doc.roundedRect(15, 8, 20, 20, 3, 3, 'F'); }
+  } else { doc.setFillColor(255, 255, 255); doc.roundedRect(15, 8, 20, 20, 3, 3, 'F'); }
+  doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+  doc.text(appSettings.companyName || 'SubTopo Engineering', 42, 16);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(...soft);
+  doc.text(appSettings.companyInfo || 'Qibla Calculator - UTM Field Stakeout', 42, 22);
+  doc.setFontSize(8); doc.text('Developed by NASRAOUI FATHI', 42, 28);
+  let y = 48;
+  doc.setTextColor(...dark); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+  doc.text(t('pdfTitle'), 105, y, { align: 'center' }); y += 10;
+  doc.setFillColor(240, 253, 250); doc.setDrawColor(...emerald);
+  doc.roundedRect(20, y, 170, 28, 3, 3, 'FD');
+  doc.setFontSize(28); doc.setTextColor(...emerald); doc.setFont('helvetica', 'bold');
+  doc.text(`${r.bearing.toFixed(2)} deg`, 105, y + 14, { align: 'center' });
+  doc.setFontSize(9); doc.setTextColor(...dark); doc.setFont('helvetica', 'normal');
+  doc.text(`${t('pdfAzimutLabel')}  -  ${r.cardinal}`, 105, y + 22, { align: 'center' }); y += 36;
+  const drawSection = (title) => {
+    doc.setFillColor(...dark); doc.rect(20, y, 170, 6, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.text(title, 25, y + 4); y += 10;
+  };
+  const drawRow = (label, value) => {
+    doc.setFontSize(8); doc.setTextColor(100, 100, 100); doc.setFont('helvetica', 'bold');
+    doc.text(label, 25, y);
+    doc.setTextColor(...dark); doc.setFont('helvetica', 'normal');
+    doc.text(String(value), 90, y); y += 5;
+  };
+  const locale = currentLang === 'en' ? 'en-GB' : 'fr-FR';
+  drawSection(t('pdfSecSite'));
+  drawRow(t('pdfSite'), r.site);
+  drawRow(t('pdfDate'), new Date(r.date).toLocaleString(locale)); y += 3;
+  drawSection(t('pdfSecCoord'));
+  drawRow(t('pdfLat'), `${r.lat.toFixed(6)} deg`);
+  drawRow(t('pdfLng'), `${r.lng.toFixed(6)} deg`);
+  if (r.x && r.y) {
+    drawRow(t('pdfX'), `${r.x.toFixed(3)} m`);
+    drawRow(t('pdfY'), `${r.y.toFixed(3)} m`);
+    drawRow(t('pdfZone'), `UTM Zone ${r.zone}`);
+  }
+  y += 3;
+  drawSection(t('pdfSecQibla'));
+  drawRow(t('pdfAzimut'), `${r.bearing.toFixed(4)} deg`);
+  drawRow(t('pdfDir'), r.cardinal);
+  drawRow(t('pdfDist'), `${r.dist.toFixed(2)} km`); y += 5;
+  if (mapImg) {
+    if (y > 180) { doc.addPage(); y = 20; }
+    drawSection(t('pdfSecMap'));
+    try { doc.addImage(mapImg, 'JPEG', 20, y, 170, 90); y += 95; } catch(e){}
+  }
+  if (stakeoutPoints.length > 0) {
+    if (y > 220) { doc.addPage(); y = 20; }
+    drawSection(`${t('pdfSecStake')} (${stakeoutPoints.length})`);
+    doc.setFillColor(240, 253, 250); doc.rect(20, y, 170, 6, 'F');
+    doc.setFontSize(8); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
+    doc.text('Pt', 25, y + 4); doc.text('Dist(m)', 45, y + 4);
+    doc.text('X Easting', 75, y + 4); doc.text('Y Northing', 110, y + 4);
+    doc.text('Latitude', 145, y + 4); doc.text('Longitude', 170, y + 4); y += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+    stakeoutPoints.forEach((p, idx) => {
+      if (y > 280) { doc.addPage(); y = 20; }
+      if (idx % 2 === 0) { doc.setFillColor(248, 250, 250); doc.rect(20, y, 170, 5, 'F'); }
+      doc.setTextColor(...dark);
+      doc.text(`P${p.n}`, 25, y + 3.5); doc.text(p.dist.toFixed(1), 45, y + 3.5);
+      doc.text(p.x.toFixed(3), 75, y + 3.5); doc.text(p.y.toFixed(3), 110, y + 3.5);
+      doc.text(p.lat ? p.lat.toFixed(6) : '-', 145, y + 3.5);
+      doc.text(p.lng ? p.lng.toFixed(6) : '-', 170, y + 3.5); y += 5;
+    });
+  }
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i); doc.setFillColor(...dark); doc.rect(0, 287, 210, 10, 'F');
+    doc.setFontSize(7); doc.setTextColor(...soft);
+    doc.text((appSettings.companyName || 'SubTopo Engineering') + ' - NASRAOUI FATHI', 105, 293, { align: 'center' });
+    doc.text(`Page ${i}/${pageCount}`, 195, 293, { align: 'right' });
+  }
+  doc.save(`qibla-report-${Date.now()}.pdf`);
+  toast(t('exportPDFOk'));
+}
+function exportData(format) {
+  if (!lastResult) return toast(t('exportNoResult'));
+  if (format === 'pdf') return exportPDF();
+  let content, filename, mime; const r = lastResult;
+  const locale = currentLang === 'en' ? 'en-GB' : 'fr-FR';
+  switch (format) {
+    case 'csv':
+      content = `Site,Latitude,Longitude,X,Y,Zone,Bearing,Cardinal,Distance_km,Date\n"${r.site}",${r.lat},${r.lng},${r.x || ''},${r.y || ''},${r.zone || ''},${r.bearing.toFixed(4)},${r.cardinal},${r.dist.toFixed(2)},${r.date}`;
+      filename = `qibla-${Date.now()}.csv`; mime = 'text/csv'; break;
+    case 'kml':
+      let sk = '';
+      if (stakeoutPoints.length) {
+        sk = `<Folder><name>Stakeout</name>`;
+        stakeoutPoints.forEach(p => { if (p.lat && p.lng) sk += `<Placemark><name>P${p.n}</name><Point><coordinates>${p.lng},${p.lat},0</coordinates></Point></Placemark>`; });
+        sk += '</Folder>';
+      }
+      content = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${r.site}</name>\n<Placemark><name>${r.site}</name><Point><coordinates>${r.lng},${r.lat},0</coordinates></Point></Placemark>\n<Placemark><name>Kaaba</name><Point><coordinates>${KAABA.lng},${KAABA.lat},0</coordinates></Point></Placemark>\n${sk}</Document></kml>`;
+      filename = `qibla-${Date.now()}.kml`; mime = 'application/vnd.google-earth.kml+xml'; break;
+    case 'dxf':
+      content = buildDXF(stakeoutPoints.length ? stakeoutPoints : [], stakeoutPoints.length > 0);
+      filename = `qibla-${Date.now()}.dxf`; mime = 'application/dxf'; break;
+    case 'txt':
+      let st = '';
+      if (stakeoutPoints.length) { st = '\n\nSTAKEOUT\n────────────\n'; stakeoutPoints.forEach(p => { st += `P${p.n} | ${p.dist.toFixed(1)}m | X=${p.x.toFixed(3)} | Y=${p.y.toFixed(3)}\n`; }); }
+      const az = currentLang === 'en' ? 'Azimuth' : 'Azimut';
+      content = `${t('pdfTitle')} - SubTopo Engineering\n${'═'.repeat(35)}\n${t('pdfSite')}      ${r.site}\n${t('pdfDate')}      ${new Date(r.date).toLocaleString(locale)}\n${t('pdfLat')}   ${r.lat.toFixed(6)}°\n${t('pdfLng')}  ${r.lng.toFixed(6)}°\n${t('pdfX')} ${r.x ? r.x.toFixed(3) : '-'} m\n${t('pdfY')} ${r.y ? r.y.toFixed(3) : '-'} m\n${t('pdfZone')} ${r.zone || '-'}\n${az}:     ${r.bearing.toFixed(4)}°\n${t('pdfDir')}  ${r.cardinal}\n${t('pdfDist')} ${r.dist.toFixed(2)} km${st}\n${'═'.repeat(35)}\nDeveloped by NASRAOUI FATHI`;
+      filename = `qibla-${Date.now()}.txt`; mime = 'text/plain'; break;
+  }
+  downloadFile(content, filename, mime);
+  toast(`✅ ${format.toUpperCase()} OK`);
+}
+
+// =============================================
+// PWA
+// =============================================
+let deferredPrompt = null, isInstalled = false;
+function checkIfInstalled() {
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    isInstalled = true;
+    document.getElementById('installBanner').classList.remove('show');
+    document.getElementById('floatingInstallBtn').style.display = 'none';
+    return true;
+  }
+  return false;
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => showInstallOption())
+      .catch(err => console.error('SW error:', err));
+  });
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); deferredPrompt = e; showInstallOption();
+});
+function showInstallOption() {
+  if (checkIfInstalled()) return;
+  document.getElementById('floatingInstallBtn').style.display = 'block';
+  setTimeout(() => {
+    if (localStorage.getItem('install_dismissed') === 'true' || isInstalled) return;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const btn = document.getElementById('installBtn');
+    const sub = document.getElementById('installSub');
+    if (isIOS) { sub.innerHTML = "👉 Safari : 📤 → Sur l'écran d'accueil"; btn.textContent = t('installComment'); }
+    else if (!deferredPrompt) { sub.innerHTML = "👉 Chrome : Menu ⋮ → Installer l'application"; btn.textContent = t('installComment'); }
+    else { sub.textContent = t('installSub'); btn.textContent = t('installBtn'); }
+    document.getElementById('installBanner').classList.add('show');
+  }, 3000);
+}
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      document.getElementById('installBanner').classList.remove('show');
+      document.getElementById('floatingInstallBtn').style.display = 'none';
+      toast(t('installOk'));
+    }
+    deferredPrompt = null;
+  } else { showInstallInstructions(); }
+});
+document.getElementById('floatingInstallBtn').addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') { document.getElementById('floatingInstallBtn').style.display = 'none'; toast(t('installOk')); }
+    deferredPrompt = null;
+  } else { showInstallInstructions(); }
+});
+document.getElementById('dismissBtn').addEventListener('click', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('install_dismissed', 'true');
+});
+function showInstallInstructions() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const icon = document.getElementById('installModalIcon');
+  const steps = document.getElementById('installModalSteps');
+  if (isIOS) {
+    icon.textContent = '🍎';
+    steps.innerHTML = `<p><b>iPhone (Safari) :</b></p><p>1️⃣ Tapez <b>📤 Partager</b></p><p>2️⃣ <b>"Sur l'écran d'accueil"</b></p><p>3️⃣ <b>Ajouter</b></p>`;
+  } else if (isAndroid) {
+    icon.textContent = '🤖';
+    steps.innerHTML = `<p><b>Android (Chrome) :</b></p><p>1️⃣ Menu <b>⋮</b></p><p>2️⃣ <b>"Installer l'application"</b></p><p>3️⃣ <b>Installer</b></p>`;
+  } else {
+    icon.textContent = '💻';
+    steps.innerHTML = `<p><b>PC (Chrome/Edge) :</b></p><p>1️⃣ Icône <b>📥</b> dans la barre d'adresse</p><p>2️⃣ <b>Installer</b></p>`;
+  }
+  document.getElementById('installModal').classList.add('show');
+}
+function closeInstallModal() { document.getElementById('installModal').classList.remove('show'); }
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  document.getElementById('floatingInstallBtn').style.display = 'none';
+  isInstalled = true; toast(t('appInstalled'));
+});
+checkIfInstalled();
+setTimeout(() => { if (!isInstalled) document.getElementById('floatingInstallBtn').style.display = 'block'; }, 5000);
+</script>
+</body>
+</html>
