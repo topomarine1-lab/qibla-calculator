@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0D9488">
+  <meta name="description" content="SubTopo-GNSS — Application de relevé GNSS de précision pour Android. Développée par Nasraoui Fathi.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SubTopo">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="msapplication-tap-highlight" content="no">
+  <title>SubTopo-GNSS — Application de relevé GNSS</title>
+  <link rel="icon" type="image/svg+xml" href="https://1dt57v2heibs3.space.minimax.io/assets/logo.svg?v=2">
+  <link rel="apple-touch-icon" href="https://1dt57v2heibs3.space.minimax.io/assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SubTopo">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="">
+</head>
+<body>
+  <!-- ========================================== -->
+  <!-- SPLASH SCREEN                              -->
+  <!-- ========================================== -->
+  <div id="splash" class="screen splash active">
+    <div class="splash-content">
+      <div class="splash-logo">
+        <img src="https://1dt57v2heibs3.space.minimax.io/assets/logo.svg?v=2" alt="SubTopo-GNSS Logo" width="180" height="180" onerror="this.style.display='none';document.getElementById('splashLogoFallback').style.display='flex';">
+        <div id="splashLogoFallback" class="splash-logo-fallback" style="display:none">STG</div>
+      </div>
+      <h1 class="splash-title">SubTopo-<span class="accent">GNSS</span></h1>
+      <p class="splash-subtitle">Application de relevé GNSS</p>
+      <p class="splash-dev">Développé par</p>
+      <p class="splash-author">Nasraoui Fathi</p>
+      <div class="loader"></div>
+      <p class="splash-loading">Chargement...</p>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MAIN APP                                   -->
+  <!-- ========================================== -->
+  <div id="app" class="screen app hidden">
+    <!-- App Bar -->
+    <header class="app-bar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+      <h1 class="app-bar-title" data-i18n="app-title">SubTopo-GNSS</h1>
+      <button class="icon-btn coord-toggle" id="coordToggle" aria-label="Format" title="Basculer UTM / Lat-Lon">📐</button>
+      <button class="icon-btn" id="themeToggle" aria-label="Thème" title="Thème sombre / clair">🌙</button>
+      <button class="icon-btn" id="langToggle" aria-label="Langue" title="Langue">🇫🇷</button>
+      <button class="icon-btn" id="aboutBtn" aria-label="À propos">ⓘ</button>
+    </header>
+
+    <!-- Side Drawer -->
+    <div id="drawer" class="drawer">
+      <div class="drawer-header">
+        <img src="https://1dt57v2heibs3.space.minimax.io/assets/logo.svg?v=2" alt="Logo" width="64" height="64" onerror="this.outerHTML='<div class=logo-fallback>STG</div>'">
+        <h2>SubTopo-GNSS</h2>
+        <p>v1.0.0</p>
+      </div>
+      <nav class="drawer-nav">
+        <a href="#" data-tab="releve">📍 Relevé</a>
+        <a href="#" data-tab="carte">🗺️ Carte</a>
+        <a href="#" data-tab="search">🔍 Recherche</a>
+        <a href="#" data-tab="mesures">📋 Mesures</a>
+        <a href="#" data-tab="resultats">📊 Résultats</a>
+        <a href="#" data-tab="export">📤 Export</a>
+        <a href="#" data-tab="parametres">⚙ Paramètres</a>
+        <a href="#" data-tab="about">ⓘ À propos</a>
+      </nav>
+      <div class="drawer-footer">
+        <p>© 2026 Nasraoui Fathi</p>
+      </div>
+    </div>
+    <div id="drawerOverlay" class="drawer-overlay"></div>
+
+    <!-- Content -->
+    <main class="content">
+      <!-- ============== TAB: RELEVÉ ============== -->
+      <section id="tab-releve" class="tab active">
+        <!-- Mini-map (always visible, collapsible) -->
+        <div class="mini-map-wrap">
+          <div class="mini-map-header">
+            <span>🗺️ Carte topographique</span>
+            <button id="toggleMiniMap" class="mini-map-toggle">−</button>
+          </div>
+          <div id="miniMap" class="mini-map"></div>
+        </div>
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+          <button class="mode-btn active" data-mode="navigation">🧭 Navigation</button>
+          <button class="mode-btn" data-mode="leving">🎯 Levé de précision</button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button id="startBtn" class="btn btn-primary">▶ DÉMARRER RELEVÉ</button>
+          <button id="stopBtn" class="btn btn-danger hidden">■ ARRÊTER RELEVÉ</button>
+        </div>
+
+        <!-- Survey Info -->
+        <div class="info-card">
+          <div class="info-row">
+            <span>📊 Nombre de mesures</span>
+            <strong id="measurementCount">0</strong>
+          </div>
+          <div class="info-row">
+            <span>⏱ Durée du relevé</span>
+            <strong id="duration">00:00:00</strong>
+          </div>
+          <div class="info-row">
+            <span>📍 État</span>
+            <strong id="status" class="status-stopped">Arrêté</strong>
+          </div>
+        </div>
+
+        <!-- Last Measurement -->
+        <div class="info-card" id="lastMeasureCard" hidden>
+          <h3 class="card-title">Dernière mesure <span class="card-subtitle" id="lastZone">—</span></h3>
+          <div class="info-row"><span class="coord-label" id="lastLabelX">X (Easting)</span><strong id="lastLat">—</strong></div>
+          <div class="info-row"><span class="coord-label" id="lastLabelY">Y (Northing)</span><strong id="lastLon">—</strong></div>
+          <div class="info-row"><span class="coord-label" id="lastLabelZ">Z (Altitude)</span><strong id="lastAlt">—</strong></div>
+          <div class="info-row"><span>Précision (m)</span><strong id="lastAccuracy">—</strong></div>
+          <div class="info-row"><span>Satellites</span><strong id="lastSats">—</strong></div>
+          <div class="info-row"><span>HDOP / VDOP / PDOP</span><strong id="lastDop">—</strong></div>
+          <div class="info-row"><span>Mode fix</span><strong id="lastFix">—</strong></div>
+        </div>
+
+        <!-- Constellation Stats -->
+        <div class="info-card">
+          <h3 class="card-title">Satellites en vue</h3>
+          <div class="constellation-grid">
+            <div class="const-item">
+              <span class="const-dot gps"></span>
+              <span>GPS</span>
+              <strong id="gpsCount">0</strong>
+            </div>
+            <div class="const-item">
+              <span class="const-dot gal"></span>
+              <span>Galileo</span>
+              <strong id="galCount">0</strong>
+            </div>
+            <div class="const-item">
+              <span class="const-dot glo"></span>
+              <span>GLONASS</span>
+              <strong id="gloCount">0</strong>
+            </div>
+            <div class="const-item">
+              <span class="const-dot bds"></span>
+              <span>BeiDou</span>
+              <strong id="bdsCount">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- SNR Visualization -->
+        <div class="info-card" id="snrCard" hidden>
+          <h3 class="card-title">SNR par satellite (dB·Hz)</h3>
+          <div id="snrChart" class="snr-chart"></div>
+        </div>
+      </section>
+
+      <!-- ============== TAB: CARTE ============== -->
+      <section id="tab-carte" class="tab">
+        <div class="carte-header">
+          <div class="carte-status">
+            <div class="status-item">
+              <span class="status-label">État</span>
+              <strong id="trackStatus" class="status-stopped">Arrêté</strong>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Points</span>
+              <strong id="trackPoints">0</strong>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Distance</span>
+              <strong id="trackDistance">0 m</strong>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Durée</span>
+              <strong id="trackDuration">00:00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="carte-controls">
+          <button id="startTrack" class="btn btn-primary">▶ DÉMARRER TRACKING</button>
+          <button id="stopTrack" class="btn btn-danger hidden">■ ARRÊTER TRACKING</button>
+        </div>
+
+        <div class="carte-layer-toggle">
+          <label>
+            <input type="radio" name="mapLayer" value="topo" checked>
+            <span>🏔️ Topo</span>
+          </label>
+          <label>
+            <input type="radio" name="mapLayer" value="osm">
+            <span>🛣️ Street</span>
+          </label>
+          <label>
+            <input type="radio" name="mapLayer" value="satellite">
+            <span>🛰️ Satellite</span>
+          </label>
+        </div>
+        <div class="carte-overlay-toggle">
+          <label>
+            <input type="checkbox" id="overlayHillshade">
+            <span>⛰️ Hillshade</span>
+          </label>
+          <label>
+            <input type="checkbox" id="overlayContours">
+            <span>📐 Contours</span>
+          </label>
+        </div>
+
+        <div id="fullMap" class="full-map"></div>
+
+        <div class="carte-legend">
+          <span><span class="legend-dot me"></span> Ma position</span>
+          <span><span class="legend-line track"></span> Track en cours</span>
+          <span><span class="legend-line track-done"></span> Tracks enregistrés</span>
+          <span><span class="legend-dot wp"></span> Waypoints</span>
+        </div>
+
+        <div class="carte-actions">
+          <button id="goToPoint" class="btn btn-primary">📍 Aller au point</button>
+          <button id="drawArea" class="btn btn-secondary">📐 Mesurer surface</button>
+          <button id="drawRoute" class="btn btn-secondary">🛣️ Dessiner route</button>
+          <button id="showProfile" class="btn btn-secondary">📊 Profil</button>
+          <button id="centerOnMeCarte" class="btn btn-secondary">🎯 Centrer</button>
+          <button id="toggleMapRotation" class="btn btn-secondary">🧭 Nord-haut</button>
+          <button id="saveAreaOffline" class="btn btn-secondary">💾 Sauver zone</button>
+          <button id="clearTrack" class="btn btn-secondary">🗑️ Effacer</button>
+        </div>
+
+        <!-- Route Drawing Panel -->
+        <div id="routePanel" class="route-panel hidden">
+          <div class="route-header">
+            <h3>🛣️ Route en construction</h3>
+            <button id="closeRoutePanel" class="nav-close" style="background:rgba(0,0,0,0.1);color:#1A2020;">✕</button>
+          </div>
+          <div class="route-stats">
+            <div class="area-stat">
+              <span>Waypoints</span>
+              <strong id="routePoints">0</strong>
+            </div>
+            <div class="area-stat">
+              <span>Distance</span>
+              <strong id="routeDistance">0 m</strong>
+            </div>
+            <div class="area-stat">
+              <span>D+ (dénivelé+)</span>
+              <strong id="routeClimb">0 m</strong>
+            </div>
+            <div class="area-stat">
+              <span>D− (dénivelé−)</span>
+              <strong id="routeDescent">0 m</strong>
+            </div>
+          </div>
+          <div class="area-instructions" id="routeInstructions">Clique sur la carte pour ajouter des waypoints à la route</div>
+          <div class="area-actions">
+            <button id="undoRoutePoint" class="btn btn-secondary">↩️ Annuler</button>
+            <button id="finishRoute" class="btn btn-primary">✓ Sauvegarder</button>
+            <button id="reverseRoute" class="btn btn-secondary">↕ Inverser</button>
+          </div>
+        </div>
+
+        <!-- Surface Measurement Panel -->
+        <div id="areaPanel" class="area-panel hidden">
+          <div class="area-header">
+            <h3>📐 Mesure de surface</h3>
+            <button id="closeAreaPanel" class="nav-close" style="background:rgba(0,0,0,0.1);color:#1A2020;">✕</button>
+          </div>
+          <div class="area-stats">
+            <div class="area-stat">
+              <span>Points</span>
+              <strong id="areaPoints">0</strong>
+            </div>
+            <div class="area-stat">
+              <span>Périmètre</span>
+              <strong id="areaPerimeter">0 m</strong>
+            </div>
+            <div class="area-stat">
+              <span>Surface</span>
+              <strong id="areaSurface">0 m²</strong>
+            </div>
+            <div class="area-stat">
+              <span>Hectares</span>
+              <strong id="areaHectares">0 ha</strong>
+            </div>
+          </div>
+          <div class="area-instructions" id="areaInstructions">Clique sur la carte pour placer les sommets du polygone</div>
+          <div class="area-actions">
+            <button id="undoAreaPoint" class="btn btn-secondary">↩️ Annuler point</button>
+            <button id="finishArea" class="btn btn-primary">✓ Terminer polygone</button>
+            <button id="clearArea" class="btn btn-secondary">🗑️ Effacer</button>
+          </div>
+        </div>
+
+        <!-- Offline Cache Status -->
+        <div id="offlineStatus" class="offline-status">
+          <span class="offline-dot"></span>
+          <span id="offlineText">En ligne</span>
+          <span id="offlineCount" class="offline-count">0 tuiles</span>
+        </div>
+
+        <!-- Navigation Panel (visible when target waypoint is set) -->
+        <div id="navPanel" class="nav-panel hidden">
+          <div class="nav-header">
+            <div class="nav-target-info">
+              <span class="nav-target-label">🎯 Cible</span>
+              <strong id="navTargetName">—</strong>
+            </div>
+            <button id="closeNav" class="nav-close" aria-label="Arrêter navigation">✕</button>
+          </div>
+          <div class="nav-body">
+            <div class="nav-compass-wrap">
+              <svg id="navCompass" class="nav-compass" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="95" fill="#FFFFFF" stroke="#0D9488" stroke-width="2"/>
+                <circle cx="100" cy="100" r="85" fill="none" stroke="#CCFBF1" stroke-width="1"/>
+                <!-- Cardinal directions -->
+                <text x="100" y="20" text-anchor="middle" font-size="16" font-weight="700" fill="#C62828">N</text>
+                <text x="180" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#5A6A6A">E</text>
+                <text x="100" y="190" text-anchor="middle" font-size="14" font-weight="700" fill="#5A6A6A">S</text>
+                <text x="20" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#5A6A6A">W</text>
+                <!-- Tick marks -->
+                <g id="compassTicks" stroke="#5A6A6A" stroke-width="1.5"></g>
+                <!-- Arrow -->
+                <g id="compassArrow" transform="rotate(0 100 100)">
+                  <polygon points="100,40 88,100 100,90 112,100" fill="#0D9488" stroke="#0F766E" stroke-width="1.5"/>
+                  <circle cx="100" cy="100" r="6" fill="#0D9488" stroke="#fff" stroke-width="2"/>
+                </g>
+              </svg>
+            </div>
+            <div class="nav-stats">
+              <div class="nav-stat">
+                <span class="nav-stat-label">Distance</span>
+                <strong id="navDistance" class="nav-stat-value">—</strong>
+              </div>
+              <div class="nav-stat">
+                <span class="nav-stat-label">Cap</span>
+                <strong id="navBearing" class="nav-stat-value">—</strong>
+              </div>
+              <div class="nav-stat">
+                <span class="nav-stat-label">Direction</span>
+                <strong id="navCardinal" class="nav-stat-value">—</strong>
+              </div>
+              <div class="nav-stat">
+                <span class="nav-stat-label">ETA</span>
+                <strong id="navEta" class="nav-stat-value">—</strong>
+              </div>
+              <div id="navArrived" class="nav-arrived hidden">✅ Arrivé !</div>
+            </div>
+          </div>
+          <div class="nav-coords" id="navCoords">—</div>
+        </div>
+      </section>
+
+      <!-- ============== TAB: SEARCH ============== -->
+      <section id="tab-search" class="tab">
+        <h2 class="tab-title" data-i18n="search-title">🔍 Recherche de lieux</h2>
+        <p class="tab-desc" data-i18n="search-desc">Cherche un lieu, une ville, un point d'intérêt. Sélectionne un résultat pour le voir sur la carte et l'ajouter comme waypoint.</p>
+        <div class="search-bar">
+          <input type="text" id="searchInput" class="search-input" placeholder="ex: Tour Eiffel, Tunis, Mont Blanc..." data-i18n-placeholder="search-placeholder">
+          <button id="searchBtn" class="search-btn">🔍</button>
+        </div>
+        <div id="searchStatus" class="search-status"></div>
+        <div id="searchResults" class="search-results"></div>
+      </section>
+
+      <!-- ============== TAB: MESURES ============== -->
+      <section id="tab-mesures" class="tab">
+        <h2 class="tab-title">Mesures enregistrées</h2>
+        <div id="mesuresEmpty" class="empty-state">
+          <p>📋 Aucune mesure enregistrée pour le moment.</p>
+          <p>Démarre un relevé pour commencer.</p>
+        </div>
+        <ul id="mesuresList" class="mesures-list"></ul>
+      </section>
+
+      <!-- ============== TAB: RÉSULTATS ============== -->
+      <section id="tab-resultats" class="tab">
+        <div id="resultatsEmpty" class="empty-state">
+          <p>📊 Aucun résultat à afficher.</p>
+          <p>Effectue un relevé pour calculer un point.</p>
+        </div>
+        <div id="resultatsContent" class="hidden">
+          <!-- Map -->
+          <div class="result-map-wrap">
+            <div class="map-header">
+              <span>🗺️ Position sur la carte</span>
+              <div class="map-controls">
+                <button id="centerOnResult" class="map-btn" title="Centrer sur le waypoint">📍</button>
+                <button id="centerOnMe" class="map-btn" title="Centrer sur ma position">🎯</button>
+                <button id="toggleGeoloc" class="map-btn active" title="Activer ma position">📡</button>
+              </div>
+            </div>
+            <div id="resultMap" class="result-map"></div>
+            <div class="map-legend">
+              <span><span class="legend-dot wp"></span> Waypoint</span>
+              <span><span class="legend-dot me"></span> Ma position</span>
+            </div>
+          </div>
+          <div class="result-card">
+            <h3 class="card-title">Point final <span id="resultZoneLabel">— UTM</span> <span id="resultZone" class="card-subtitle">—</span></h3>
+            <div class="coord-row">
+              <span class="coord-label" id="resultLabelX">X (Easting)</span>
+              <strong id="resultLat">—</strong>
+            </div>
+            <div class="coord-row">
+              <span class="coord-label" id="resultLabelY">Y (Northing)</span>
+              <strong id="resultLon">—</strong>
+            </div>
+            <div class="coord-row">
+              <span class="coord-label" id="resultLabelZ">Z (Altitude)</span>
+              <strong id="resultAlt">—</strong>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <h3 class="card-title">Statistiques</h3>
+            <div class="coord-row">
+              <span>RMS 2D</span>
+              <strong id="resultRms2D">—</strong>
+            </div>
+            <div class="coord-row">
+              <span>RMS 3D</span>
+              <strong id="resultRms3D">—</strong>
+            </div>
+            <div class="coord-row">
+              <span>Précision estimée (95%)</span>
+              <strong id="resultAccuracy">—</strong>
+            </div>
+            <div class="coord-row">
+              <span>Qualité</span>
+              <strong id="resultQuality" class="quality-badge">—</strong>
+            </div>
+            <div class="coord-row">
+              <span>Nombre de mesures</span>
+              <strong id="resultCount">—</strong>
+            </div>
+            <div class="coord-row">
+              <span>Durée du levé</span>
+              <strong id="resultDuration">—</strong>
+            </div>
+          </div>
+
+          <button id="saveWaypointBtn" class="btn btn-primary">📍 ENREGISTRER LE WAYPOINT</button>
+          <button id="exportCsvBtn" class="btn btn-secondary">📤 EXPORTER (CSV)</button>
+        </div>
+      </section>
+
+      <!-- ============== TAB: EXPORT ============== -->
+      <section id="tab-export" class="tab">
+        <h2 class="tab-title">Exporter les waypoints</h2>
+        <p class="tab-desc">Format compatible avec <strong>AlpineQuest</strong>, QGIS, Google Earth et autres outils topographiques.</p>
+
+        <div class="export-card" data-format="gpx">
+          <div class="export-icon">📍</div>
+          <div class="export-info">
+            <h3>GPX</h3>
+            <p>GPS Exchange Format — standard universel pour waypoints et traces.</p>
+          </div>
+          <button class="btn btn-primary export-btn" data-format="gpx">Télécharger</button>
+        </div>
+
+        <div class="export-card" data-format="kml">
+          <div class="export-icon">🌍</div>
+          <div class="export-info">
+            <h3>KML</h3>
+            <p>Keyhole Markup Language — pour Google Earth et applications SIG.</p>
+          </div>
+          <button class="btn btn-primary export-btn" data-format="kml">Télécharger</button>
+        </div>
+
+        <div class="export-card" data-format="csv">
+          <div class="export-icon">📊</div>
+          <div class="export-info">
+            <h3>CSV</h3>
+            <p>Comma-Separated Values — pour Excel, scripts et analyses.</p>
+          </div>
+          <button class="btn btn-primary export-btn" data-format="csv">Télécharger</button>
+        </div>
+
+        <div class="export-card" data-format="geojson">
+          <div class="export-icon">🌐</div>
+          <div class="export-info">
+            <h3>GeoJSON</h3>
+            <p>Format web moderne — pour Leaflet, Mapbox, QGIS, applications web.</p>
+          </div>
+          <button class="btn btn-primary export-btn" data-format="geojson">Télécharger</button>
+        </div>
+
+        <h3 class="export-subtitle">📥 Importer</h3>
+        <div class="import-card">
+          <div class="import-icon">📂</div>
+          <div class="import-info">
+            <h3>Importer un fichier</h3>
+            <p>GPX, KML, GeoJSON, CSV avec waypoints et tracks.</p>
+          </div>
+          <input type="file" id="importFile" accept=".gpx,.kml,.kmz,.geojson,.json,.csv" style="display:none">
+          <button class="btn btn-secondary" id="importBtn">Choisir fichier</button>
+        </div>
+        <div id="importStatus" class="export-status"></div>
+
+        <div id="exportStatus" class="export-status"></div>
+      </section>
+
+      <!-- ============== TAB: PARAMÈTRES ============== -->
+      <section id="tab-parametres" class="tab">
+        <h2 class="tab-title">Paramètres</h2>
+
+        <div class="settings-section">
+          <h3>Mode de mesure</h3>
+          <div class="setting">
+            <label>Durée de moyennage</label>
+            <select id="avgDuration">
+              <option value="60">1 minute</option>
+              <option value="300" selected>5 minutes</option>
+              <option value="600">10 minutes</option>
+              <option value="0">Manuel (sans limite)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Format des coordonnées</h3>
+          <div class="setting">
+            <label>Affichage par défaut</label>
+            <select id="coordFormat">
+              <option value="utm">📐 UTM (X, Y, Z) — Easting/Northing/Altitude</option>
+              <option value="geo">🌍 Géographique (Lat, Lon, Alt)</option>
+            </select>
+          </div>
+          <div class="setting">
+            <label>Zone UTM</label>
+            <select id="utmZoneOverride">
+              <option value="auto">🔄 Auto (calculée depuis la longitude)</option>
+            </select>
+          </div>
+          <p class="setting-hint">L'option "Auto" est recommandée. Force la zone uniquement pour un projet spécifique qui utilise une zone fixe.</p>
+        </div>
+
+        <div class="settings-section">
+          <h3>Corrections NTRIP</h3>
+          <div class="setting">
+            <label>Activer NTRIP</label>
+            <input type="checkbox" id="ntripEnabled">
+          </div>
+          <div class="setting">
+            <label>Serveur (host:port)</label>
+            <input type="text" id="ntripServer" placeholder="rtk.example.com:2101">
+          </div>
+          <div class="setting">
+            <label>Point de montage</label>
+            <input type="text" id="ntripMount" placeholder="MNT_PNT">
+          </div>
+          <div class="setting">
+            <label>Identifiant</label>
+            <input type="text" id="ntripUser" placeholder="utilisateur">
+          </div>
+          <div class="setting">
+            <label>Mot de passe</label>
+            <input type="password" id="ntripPass" placeholder="••••••">
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Qualité des mesures</h3>
+          <div class="setting">
+            <label>Elevation mask (°)</label>
+            <input type="number" id="elevMask" value="15" min="0" max="45">
+          </div>
+          <div class="setting">
+            <label>Seuil SNR minimum (dB·Hz)</label>
+            <input type="number" id="snrThresh" value="30" min="0" max="55">
+          </div>
+          <div class="setting">
+            <label>Constellations actives</label>
+            <div class="checkbox-group">
+              <label><input type="checkbox" id="useGps" checked> GPS</label>
+              <label><input type="checkbox" id="useGalileo" checked> Galileo</label>
+              <label><input type="checkbox" id="useGlonass" checked> GLONASS</label>
+              <label><input type="checkbox" id="useBeidou" checked> BeiDou</label>
+            </div>
+          </div>
+        </div>
+
+        <button id="saveSettings" class="btn btn-primary">💾 Enregistrer les paramètres</button>
+        <div id="settingsStatus" class="settings-status"></div>
+      </section>
+
+      <!-- ============== TAB: À PROPOS ============== -->
+      <section id="tab-about" class="tab">
+        <div class="about-header">
+          <img src="https://1dt57v2heibs3.space.minimax.io/assets/logo.svg?v=2" alt="Logo" width="120" height="120" onerror="this.outerHTML='<div class=logo-fallback>STG</div>'">
+          <h2>SubTopo-<span class="accent">GNSS</span></h2>
+          <p class="about-version">Version 1.0.0</p>
+        </div>
+
+        <div class="about-section">
+          <h3>📡 Mesures GNSS brutes</h3>
+          <p>Enregistre les pseudodistances, phases porteuses, Doppler et SNR depuis l'API <code>GnssMeasurement</code> d'Android. Utilise toutes les constellations : GPS, Galileo, GLONASS, BeiDou.</p>
+        </div>
+
+        <div class="about-section">
+          <h3>📐 Coordonnées UTM (X, Y, Z)</h3>
+          <p>Conversion automatique WGS84 → UTM : <strong>X</strong> = Easting, <strong>Y</strong> = Northing, <strong>Z</strong> = Altitude (m). Le zone UTM est calculée depuis la longitude. Format projeté, idéal pour les levés topographiques et calculs de surface.</p>
+        </div>
+
+        <div class="about-section">
+          <h3>📶 Corrections en temps réel</h3>
+          <p>Connexion aux services de correction NTRIP (Network RTK), SSR, ou PPP pour atteindre une précision sub-métrique en conditions favorables.</p>
+        </div>
+
+        <div class="about-section">
+          <h3>🎯 Moyennage intelligent</h3>
+      <p>Calcul d'une position précise par moyenne pondérée sur 1, 5 ou 10 minutes. Le poids de chaque mesure est inversement proportionnel à sa variance — les meilleures mesures comptent plus.</p>
+        </div>
+
+        <div class="about-section">
+          <h3>🗺️ Carte topographique & tracking</h3>
+          <p>Carte topographique <strong>OpenTopoMap</strong> (avec courbes de niveau) ou satellite (Esri). Tracking GPS en temps réel pendant la navigation et les levés : polyline de ton parcours, distance parcourue, durée, et export <strong>GPX avec trk + wpt</strong> pour AlpineQuest / QGIS.</p>
+        </div>
+
+        <div class="about-section">
+          <h3>⚠️ Limites matérielles</h3>
+          <p>La précision est limitée par le matériel du téléphone : antenne céramique petite, bruit de mesure, accès partiel aux paramètres internes du récepteur. Le 0,5 m en temps réel n'est pas garanti, mais le mode Levé de précision avec moyennage et corrections peut donner d'excellents résultats en conditions optimales (ciel dégagé, pas de multi-trajet).</p>
+        </div>
+
+        <div class="about-footer">
+          <p>Développé avec ❤️ par</p>
+          <p class="author-name">Nasraoui Fathi</p>
+          <p class="copyright">© 2026 — Tous droits réservés</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="releve">
+        <span class="nav-icon">📍</span>
+        <span class="nav-label" data-i18n="nav-releve">Relevé</span>
+      </button>
+      <button class="nav-item" data-tab="carte">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label" data-i18n="nav-carte">Carte</span>
+      </button>
+      <button class="nav-item" data-tab="search">
+        <span class="nav-icon">🔍</span>
+        <span class="nav-label" data-i18n="nav-search">Recherche</span>
+      </button>
+      <button class="nav-item" data-tab="mesures">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label" data-i18n="nav-mesures">Mesures</span>
+      </button>
+      <button class="nav-item" data-tab="resultats">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label" data-i18n="nav-resultats">Résultats</span>
+      </button>
+      <button class="nav-item" data-tab="parametres">
+        <span class="nav-icon">⚙</span>
+        <span class="nav-label" data-i18n="nav-parametres">Plus</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Onboarding Tour -->
+  <div id="onboardingModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content onboarding-content">
+      <div class="onboarding-progress">
+        <div class="onboarding-dot active" data-step="0"></div>
+        <div class="onboarding-dot" data-step="1"></div>
+        <div class="onboarding-dot" data-step="2"></div>
+        <div class="onboarding-dot" data-step="3"></div>
+      </div>
+      <div class="onboarding-step" data-step="0">
+        <div class="onboarding-emoji">📍</div>
+        <h2>Bienvenue dans SubTopo-GNSS</h2>
+        <p>L'application web de relevé GNSS de précision pour terrain. Découvrons ensemble les fonctionnalités principales.</p>
+      </div>
+      <div class="onboarding-step hidden" data-step="1">
+        <div class="onboarding-emoji">🛰️</div>
+        <h2>Données GPS réelles</h2>
+        <p>L'app utilise le GPS réel de ton appareil (pas de simulation). Tu peux faire des levés avec moyenne pondérée, précision RMS, et corrections NTRIP/RTK.</p>
+      </div>
+      <div class="onboarding-step hidden" data-step="2">
+        <div class="onboarding-emoji">🗺️</div>
+        <h2>Cartes topo hors-ligne</h2>
+        <p>Choisis entre Topo (OpenTopoMap avec courbes de niveau), Street ou Satellite. Les tuiles sont mises en cache automatiquement pour fonctionner hors-ligne.</p>
+      </div>
+      <div class="onboarding-step hidden" data-step="3">
+        <div class="onboarding-emoji">📊</div>
+        <h2>Tout pour le terrain</h2>
+        <p>Tracking GPS, calcul de surface, profil altimétrique, routes, waypoints avec photos, recherche de lieux, alertes de proximité, exports multi-formats. C'est parti !</p>
+      </div>
+      <div class="modal-footer">
+        <button id="onboardingSkip" class="btn btn-secondary">Passer</button>
+        <button id="onboardingPrev" class="btn btn-secondary" disabled>← Précédent</button>
+        <button id="onboardingNext" class="btn btn-primary">Suivant →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Elevation Profile Modal -->
+  <div id="profileModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📊 Profil altimétrique</h3>
+        <button id="closeProfileModal" class="modal-close" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="profile-stats">
+          <div class="area-stat">
+            <span>Distance</span>
+            <strong id="profileDistance">—</strong>
+          </div>
+          <div class="area-stat">
+            <span>Altitude min</span>
+            <strong id="profileMin">—</strong>
+          </div>
+          <div class="area-stat">
+            <span>Altitude max</span>
+            <strong id="profileMax">—</strong>
+          </div>
+          <div class="area-stat">
+            <span>D+ / D−</span>
+            <strong id="profileClimb">—</strong>
+          </div>
+          <div class="area-stat">
+            <span>Pente moy.</span>
+            <strong id="profileSlope">—</strong>
+          </div>
+          <div class="area-stat">
+            <span>Points</span>
+            <strong id="profilePoints">—</strong>
+          </div>
+        </div>
+        <canvas id="profileCanvas" class="profile-canvas"></canvas>
+        <p class="profile-source" id="profileSource">Source : track en cours</p>
+      </div>
+      <div class="modal-footer">
+        <button id="exportProfile" class="btn btn-secondary">📤 Exporter profil (CSV)</button>
+        <button id="closeProfileFooter" class="btn btn-primary">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Waypoint Modal -->
+  <div id="addWaypointModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📍 Ajouter un waypoint cible</h3>
+        <button id="closeModal" class="modal-close" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-mode="utm">📐 UTM (X, Y, Z)</button>
+        <button class="modal-tab" data-mode="geo">🌍 Lat / Lon</button>
+        <button class="modal-tab" data-mode="map">🗺️ Cliquer carte</button>
+      </div>
+      <div class="modal-body">
+        <!-- UTM inputs -->
+        <div id="utmInputs" class="modal-panel active">
+          <div class="setting">
+            <label>Nom du waypoint (optionnel)</label>
+            <input type="text" id="wpName" placeholder="ex: Point A, Sommet, Balise...">
+          </div>
+          <div class="setting">
+            <label>Zone UTM</label>
+            <select id="wpZone">
+              <option value="auto">🔄 Auto (depuis coordonnées)</option>
+            </select>
+          </div>
+          <div class="setting">
+            <label>X (Easting) en mètres</label>
+            <input type="number" id="wpX" placeholder="ex: 605393.14" step="0.01">
+          </div>
+          <div class="setting">
+            <label>Y (Northing) en mètres</label>
+            <input type="number" id="wpY" placeholder="ex: 4074058.22" step="0.01">
+          </div>
+          <div class="setting">
+            <label>Z (Altitude) en mètres</label>
+            <input type="number" id="wpZ" placeholder="ex: 4.50" step="0.01" value="0">
+          </div>
+          <div class="setting">
+            <label>📷 Photo (optionnel)</label>
+            <input type="file" id="wpPhoto" accept="image/*" capture="environment">
+            <div id="wpPhotoPreview" class="wp-photo-preview"></div>
+          </div>
+        </div>
+        <!-- Geo inputs -->
+        <div id="geoInputs" class="modal-panel">
+          <div class="setting">
+            <label>Nom du waypoint (optionnel)</label>
+            <input type="text" id="wpNameGeo" placeholder="ex: Point A, Sommet, Balise...">
+          </div>
+          <div class="setting">
+            <label>Latitude (degrés décimaux)</label>
+            <input type="number" id="wpLat" placeholder="ex: 36.8065000" step="0.0000001">
+          </div>
+          <div class="setting">
+            <label>Longitude (degrés décimaux)</label>
+            <input type="number" id="wpLon" placeholder="ex: 10.1815000" step="0.0000001">
+          </div>
+          <div class="setting">
+            <label>Altitude (mètres)</label>
+            <input type="number" id="wpAlt" placeholder="ex: 4.50" step="0.01" value="0">
+          </div>
+          <div class="setting">
+            <label>📷 Photo (optionnel)</label>
+            <input type="file" id="wpPhotoGeo" accept="image/*" capture="environment">
+            <div id="wpPhotoPreviewGeo" class="wp-photo-preview"></div>
+          </div>
+        </div>
+        <!-- Map picker -->
+        <div id="mapInputs" class="modal-panel">
+          <p class="modal-hint">📍 Clique sur la carte pour placer le waypoint cible. Tu peux zoomer pour être précis.</p>
+          <div id="pickerMap" class="picker-map"></div>
+          <div class="picker-coords" id="pickerCoords">Clique sur la carte...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelWp" class="btn btn-secondary">Annuler</button>
+        <button id="saveWp" class="btn btn-primary">✓ Activer navigation</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <script src="main.js"></script>
+</body>
+</html>
